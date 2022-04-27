@@ -1,25 +1,37 @@
 PROJECT_NAME ?= robot
-TINKOFF_PROTO=$(PWD)/investapi/contract
-ROBOT_PROTO=$(PWD)/robot/proto
+
+ROOT_DIR=$(PWD)
+
+TINKOFF_PROTO=$(ROOT_DIR)/investapi
+ROBOT_PROTO=$(ROOT_DIR)/robot/proto
+
 
 all:
+	@echo "build			- Build project"
+	@echo "setup			- Setup project"
 	@echo "clean			- Remove compiled proto"
+	@echo "compile-proto	- Compile all .proto files"
 	@echo "lint				- Run linter"
-	@echo "coverage			- Show tests coverage"
 	@echo "tests			- Run tests"
+	@echo "coverage			- Show test's coverage"
 	@exit 0
+
+build:
+	go build -v ./cmd/run-robot/
 
 setup:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 clean:
 	rm -f $(TINKOFF_PROTO)/*.go
 	rm -f $(ROBOT_PROTO)/*.go
+	rm -f ./run-robot
 
 compile-proto:
 	make clean
-	protoc -I=$(TINKOFF_PROTO) --go_out=$(TINKOFF_PROTO)/ $(TINKOFF_PROTO)/*
+	protoc -I=$(TINKOFF_PROTO) --go_out=$(TINKOFF_PROTO)/ --go-grpc_out=$(TINKOFF_PROTO)/ $(TINKOFF_PROTO)/*
 	protoc -I=$(ROBOT_PROTO) --go_out=$(ROBOT_PROTO)/ $(ROBOT_PROTO)/*
 
 lint:
@@ -31,4 +43,5 @@ tests:
 coverage:
 	go test -cover ./robot
 
-.PHONY: setup clean test lint coverage
+
+.PHONY: all build setup clean compile-proto test lint coverage

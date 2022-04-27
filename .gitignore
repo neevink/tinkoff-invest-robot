@@ -1,5 +1,9 @@
+# ide
 .idea/
 
-investapi/contract/*.go
-
+# proto output
+investapi/*.go
 robot/proto/*.go
+
+# output
+run-robot
