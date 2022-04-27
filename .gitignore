@@ -1,0 +1,5 @@
+.idea/
+
+investapi/contract/*.go
+
+robot/proto/*.go

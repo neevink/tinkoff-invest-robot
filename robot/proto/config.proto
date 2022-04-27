@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package robot.config;
+option go_package = "robot";
+
+
+message RobotConfig {
+  string tinkoff_api_endpoint = 1;
+
+}
