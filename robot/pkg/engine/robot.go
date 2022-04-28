@@ -13,24 +13,24 @@ import (
 
 	"tinkoff-invest-bot/investapi"
 
-	robotProto "tinkoff-invest-bot/robot/proto"
+	"tinkoff-invest-bot/internal/robot"
 )
 
 type investRobot struct {
-	config *robotProto.RobotConfig
+	config *robot.Config
 }
 
-func New(config *robotProto.RobotConfig) *investRobot {
+func New(config *robot.Config) *investRobot {
 	return &investRobot{
 		config: config,
 	}
 }
 
 func (r *investRobot) Run(ctx context.Context) error {
-	creds := oauth.NewOauthAccess(&oauth2.Token{AccessToken: r.config.GetAccessToken()})
+	creds := oauth.NewOauthAccess(&oauth2.Token{AccessToken: r.config.AccessToken})
 
 	connection, err := grpc.Dial(
-		r.config.GetTinkoffApiEndpoint(),
+		r.config.TinkoffApiEndpoint,
 		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
 		grpc.WithPerRPCCredentials(creds),
 	)

@@ -32,7 +32,6 @@ clean:
 compile-proto:
 	make clean
 	protoc -I=$(TINKOFF_PROTO) --go_out=$(TINKOFF_PROTO)/ --go-grpc_out=$(TINKOFF_PROTO)/ $(TINKOFF_PROTO)/*
-	protoc -I=$(ROBOT_PROTO) --go_out=$(ROBOT_PROTO)/ $(ROBOT_PROTO)/*
 
 lint:
 	golangci-lint run
