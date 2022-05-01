@@ -11,10 +11,10 @@ import (
 )
 
 type investRobot struct {
-	config *robot.Config
+	config *robot.RobotConfig
 }
 
-func New(config *robot.Config) *investRobot {
+func New(config *robot.RobotConfig) *investRobot {
 	return &investRobot{
 		config: config,
 	}

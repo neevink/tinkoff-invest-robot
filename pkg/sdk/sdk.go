@@ -81,6 +81,18 @@ func (s *sdk) GetShares() ([]*api.Share, error) {
 	return r.GetInstruments(), nil
 }
 
+func (s *sdk) GetInstrumentByFigi(figi string) (*api.Instrument, error) {
+	request := &api.InstrumentRequest{
+		IdType: api.InstrumentIdType_INSTRUMENT_ID_TYPE_FIGI,
+		Id:     figi,
+	}
+	r, err := s.instruments.GetInstrumentBy(s.ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	return r.GetInstrument(), nil
+}
+
 func (s *sdk) GetLastPrices(figi []string) ([]*api.LastPrice, error) {
 	// figi it's id of share, looks like "BBG002293PJ4"
 	r, err := s.marketData.GetLastPrices(s.ctx, &api.GetLastPricesRequest{Figi: figi})
@@ -170,3 +182,13 @@ func (s *sdk) GetPortfolio(accountId string) (*api.PortfolioResponse, error) {
 		AccountId: accountId,
 	})
 }
+
+//func (s *sdk) GetShareInfo() (*api.Instrument, error) {
+//	resp, err := s.instruments.GetInstrumentBy(s.ctx, &api.InstrumentRequest{
+//		IdType: api.InstrumentIdType_INSTRUMENT_ID_TYPE_FIGI,
+//	})
+//	if err != nil {
+//		return nil, err
+//	}
+//	return resp.GetInstrument(), nil
+//}

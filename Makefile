@@ -30,6 +30,7 @@ clean:
 	rm -f $(ROBOT_PROTO)/*.go
 	rm -f ./run-robot
 	rm -f ./generate-config
+	rm -f ./generated/*
 
 compile-proto:
 	make clean

@@ -11,16 +11,23 @@ import (
 )
 
 func main() {
-	log.Print("Config generator is running")
-
-	config := robot.LoadConfig("./configs/main.yaml")
-
-	// ctx := context.Background()
+	log.Print("RobotConfig generator is running")
+	config, err := robot.LoadRobotConfig("./configs/robot.yaml")
+	if err != nil {
+		log.Fatalf("Can't load robot configs: %v", err)
+	}
 
 	s, err := sdk.New(config.TinkoffApiEndpoint, config.AccessToken)
 	if err != nil {
 		log.Fatalf("Can't init sdk: %v", err)
 	}
+
+	fmt.Printf("Input new config name without spaces:\n")
+	var fileName string
+	if _, err := fmt.Scan(&fileName); err != nil {
+		log.Fatalf("Scan for accountIndex failed, due to %e", err)
+	}
+	newConfigsPath := "./generated/" + fileName + ".yaml"
 
 	userInfo, err := s.GetUserInfo()
 	if err != nil {
@@ -55,6 +62,27 @@ func main() {
 	printMoney("minimal_margin", marginAttrs.GetMinimalMargin())
 	printMoney("amount_of_missing_funds", marginAttrs.GetAmountOfMissingFunds())
 
+	fmt.Printf("Input figi of share (example: BBG00RZ9HFD6):\n")
+	var figi string
+	if _, err := fmt.Scan(&figi); err != nil {
+		log.Fatalf("Scan for figi failed: %e", err)
+	}
+
+	share, err := s.GetInstrumentByFigi(figi)
+	if err != nil {
+		log.Fatalf("Can't receive share: %v", err)
+	}
+	fmt.Printf("Share name: %s, currency: %s, instrument: %s\n", share.GetName(), share.GetCurrency(), share.GetInstrumentType())
+
+	newConfig := &robot.TradingConfig{
+		AccountId:       account.GetId(),
+		Figi:            figi,
+		TradingStrategy: "simple",
+	}
+	if err := robot.WriteTradingConfig(newConfigsPath, newConfig); err != nil {
+		log.Fatalf("Saving error %e", err)
+	}
+	fmt.Printf("New trading config added successfully!")
 }
 
 func printMoney(mes string, moneyValue *api.MoneyValue) {

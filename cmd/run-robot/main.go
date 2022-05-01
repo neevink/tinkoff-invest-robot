@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"tinkoff-invest-bot/internal/robot"
@@ -9,7 +10,16 @@ import (
 )
 
 func main() {
-	config := robot.LoadConfig("./configs/main.yaml")
+	config, err := robot.LoadRobotConfig("./configs/robot.yaml")
+	if err != nil {
+		log.Fatalf("Can't load robot configs: %v", err)
+	}
+	tradingConfigs := robot.LoadTradingConfigsFromDir("./generated/")
+
+	fmt.Println("Parsed trading configs:")
+	for _, conf := range tradingConfigs {
+		fmt.Printf("%v\n", conf)
+	}
 
 	ctx := context.Background()
 
