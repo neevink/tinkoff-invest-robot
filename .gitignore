@@ -7,3 +7,5 @@ robot/proto/*.go
 
 # output
 run-robot
+generate-config
+generated/

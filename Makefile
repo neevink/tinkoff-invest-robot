@@ -18,6 +18,7 @@ all:
 
 build:
 	go build -v ./cmd/run-robot/
+	go build -v ./cmd/generate-config/
 
 setup:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
@@ -28,6 +29,8 @@ clean:
 	rm -f $(TINKOFF_PROTO)/*.go
 	rm -f $(ROBOT_PROTO)/*.go
 	rm -f ./run-robot
+	rm -f ./generate-config
+	rm -f ./generated/*
 
 compile-proto:
 	make clean
