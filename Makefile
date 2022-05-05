@@ -22,7 +22,9 @@ build:
 	go build -v ./cmd/generate-config/
 
 setup:
-	apt install -y protobuf-compiler
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+	apt-get install -y protobuf-compiler
 
 setup-dev:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
