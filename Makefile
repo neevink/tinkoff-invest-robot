@@ -9,6 +9,7 @@ ROBOT_PROTO=$(ROOT_DIR)/robot/proto
 all:
 	@echo "build			- Build project"
 	@echo "setup			- Setup project"
+	@echo "setup-dev		- Setup dev dependencies"
 	@echo "clean			- Remove compiled proto"
 	@echo "compile-proto	- Compile all .proto files"
 	@echo "lint				- Run linter"
@@ -22,8 +23,10 @@ build:
 
 setup:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+setup-dev:
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
 clean:
 	rm -f $(TINKOFF_PROTO)/*.go
@@ -37,13 +40,14 @@ compile-proto:
 	protoc -I=$(TINKOFF_PROTO) --go_out=$(TINKOFF_PROTO)/ --go-grpc_out=$(TINKOFF_PROTO)/ $(TINKOFF_PROTO)/*
 
 lint:
+	go vet ./...
 	golangci-lint run
 
 tests:
-	go test -v -failfast ./robot
+	go test -race -v -failfast ./...
 
 coverage:
-	go test -cover ./robot
+	go test -cover ./...
 
 
-.PHONY: all build setup clean compile-proto test lint coverage
+.PHONY: all build setup setup-dev clean compile-proto lint tests coverage
