@@ -37,6 +37,9 @@ func main() {
 
 	log.Println("Select trading account:")
 	accounts, err := s.GetAccounts()
+	if err != nil {
+		log.Fatalf("Can't receive accounts: %v", err)
+	}
 	for i, account := range accounts {
 		fmt.Printf("%d. %s (status: %s, account id: %s)\n", i, account.GetName(), account.GetStatus(), account.GetId())
 	}
