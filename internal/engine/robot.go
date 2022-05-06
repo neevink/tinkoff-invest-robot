@@ -6,15 +6,15 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"tinkoff-invest-bot/internal/robot"
+	"tinkoff-invest-bot/internal/config"
 	"tinkoff-invest-bot/pkg/sdk"
 )
 
 type investRobot struct {
-	config *robot.RobotConfig
+	config *config.Config
 }
 
-func New(config *robot.RobotConfig) *investRobot {
+func New(config *config.Config) *investRobot {
 	return &investRobot{
 		config: config,
 	}
