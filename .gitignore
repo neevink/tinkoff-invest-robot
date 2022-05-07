@@ -1,11 +1,10 @@
 # ide
-.idea/
+.idea
 
 # proto output
 investapi/*.go
-robot/proto/*.go
 
 # output
 run-robot
 generate-config
-generated/
+configs/generated

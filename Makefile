@@ -3,7 +3,6 @@ PROJECT_NAME ?= robot
 ROOT_DIR=$(PWD)
 
 TINKOFF_PROTO=$(ROOT_DIR)/investapi
-ROBOT_PROTO=$(ROOT_DIR)/robot/proto
 
 
 all:
@@ -27,7 +26,6 @@ setup:
 
 clean:
 	rm -f $(TINKOFF_PROTO)/*.go
-	rm -f $(ROBOT_PROTO)/*.go
 	rm -f ./run-robot
 	rm -f ./generate-config
 	rm -f ./generated/*
@@ -40,10 +38,10 @@ lint:
 	golangci-lint run
 
 tests:
-	go test -v -failfast ./robot
+	go test -v -failfast ./internal/engine
 
 coverage:
-	go test -cover ./robot
+	go test -cover ./internal/engine
 
 
 .PHONY: all build setup clean compile-proto test lint coverage
