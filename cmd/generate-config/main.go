@@ -3,11 +3,15 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/fatih/color"
 	"log"
 	"math"
 	"os"
 	"strconv"
+	"strings"
+	"time"
+
+	"github.com/fatih/color"
+
 	api "tinkoff-invest-bot/investapi"
 
 	"tinkoff-invest-bot/internal/config"
@@ -15,25 +19,24 @@ import (
 )
 
 var (
-	scanner = bufio.NewScanner(os.Stdin)
-	bold    = color.New(color.Bold).SprintfFunc()
+	scanner          = bufio.NewScanner(os.Stdin)
+	bold             = color.New(color.Bold).SprintfFunc()
+	configsPath      = "./configs/generated/"
+	commonConfigPath = "./configs/common.yaml"
 )
 
 func main() {
 	fmt.Println(color.GreenString("🤖 Генератор конфига для торгового робота запущен!"))
-	fmt.Println("Следуйте инструкциям 📝", color.MagentaString("блабла"), "можете использовать значения по умолчанию", color.MagentaString("бла"))
+	fmt.Println("Робот создан для торговли", color.MagentaString("базовыми акциями 📈"), "на MOEX и SPB")
 	fmt.Println("Еще немного текста который можно в любой момент изменить 💫")
-
-	commonConfig := config.LoadConfig("./configs/common.yaml")
-
-	tinkoffApiEndpoint := requestParameter(color.BlueString("📬 Адрес сервиса"), commonConfig.TinkoffApiEndpoint)
-	accessToken := requestParameter(color.BlueString("🔑 Токен доступа"), commonConfig.AccessToken)
+	commonConfig := config.LoadConfig(commonConfigPath)
+	tinkoffApiEndpoint := requestParameter("📬 Адрес сервиса", commonConfig.TinkoffApiEndpoint)
+	accessToken := requestParameter("🔑 Токен доступа", "")
 
 	s, err := sdk.New(tinkoffApiEndpoint, accessToken)
 	if err != nil {
 		log.Fatalf("Не удается инициализировать SDK: %v", err)
 	}
-
 	accounts, err := s.GetAccounts()
 	if err != nil {
 		log.Fatalf("Не удается получить информацию об аккаунтах: %v", err)
@@ -48,48 +51,66 @@ func main() {
 	}
 	accountsInfo, invalidAccounts := accountsReport(accountsAndPortfolios)
 	if invalidAccounts > 0 {
-		fmt.Printf(color.YellowString("😵 Найдено невалидных аккаунтов для торговли: %d\n", invalidAccounts))
+		fmt.Printf(color.YellowString("Найдено невалидных аккаунтов для торговли")+": %d\n", invalidAccounts)
 	}
-	n := requestChoice(color.BlueString("👤 Выберите аккаунт для торговли"), accountsInfo)
+	n := requestChoice("👤 Выберите аккаунт для торговли", accountsInfo)
 	account := accounts[n]
 
-	fmt.Printf("Selected account with id=%s\n", account.GetId())
-
-	fmt.Printf("Input figi of share (example: BBG00RZ9HFD6):\n")
-	var figi string
-	if _, err := fmt.Scanln(&figi); err != nil {
-		log.Fatalf("Scan for figi failed: %e", err)
-	}
-
-	share, err := s.GetInstrumentByFigi(figi)
+	responseShares, err := s.GetShares()
 	if err != nil {
-		log.Fatalf("Can't receive share: %v", err)
+		log.Fatalf("Не удается получить информацию об акциях: %v", err)
 	}
-	fmt.Printf("Share name: %s, currency: %s, instrument: %s\n", share.GetName(), share.GetCurrency(), share.GetInstrumentType())
+	var commonTickers []string
+	for _, ticker := range commonConfig.Shares {
+		commonTickers = append(commonTickers, ticker.Ticker)
+	}
+	input := requestParameter("🛍 Введите тикеры акций для торговли", strings.Trim(fmt.Sprint(commonTickers), "[]"))
+	var tickers []string
+	if input == "" {
+		tickers = commonTickers
+	} else {
+		tickers = strings.Split(input, " ")
+	}
+	for i := 0; i < len(tickers); i++ {
+		tickers[i] = strings.ToUpper(tickers[i])
+	}
+	var shares []config.Share
+TickerLoop:
+	for _, ticker := range tickers {
+		for _, share := range responseShares {
+			if share.GetTicker() == ticker {
+				shares = append(shares, config.Share{Ticker: ticker, Figi: share.GetFigi()})
+				continue TickerLoop
+			}
+		}
+		fmt.Println(color.YellowString("Инструмент с тикером \"" + ticker + "\" не найден!"))
+	}
 
 	newConfig := &config.Config{
 		TinkoffApiEndpoint: tinkoffApiEndpoint,
 		AccessToken:        accessToken,
 		AccountId:          account.GetId(),
-		Figi:               figi,
+		Shares:             shares,
 	}
 
-	fmt.Printf("Input new config name without spaces:\n")
-	var fileName string
-	if _, err := fmt.Scanln(&fileName); err != nil {
-		log.Fatalf("Scan for accountIndex failed, due to %e", err)
+	fileName := requestParameter("📄 Название нового конфига", "config_at_"+time.Now().Format("02-01-06_15:04.05"))
+	if strings.Contains(fileName, "/") {
+		log.Fatalf("Использование подпапок недопустимо")
 	}
-	newConfigsPath := "./generated/" + fileName + ".yaml"
-
-	if err := config.WriteConfig(newConfigsPath, newConfig); err != nil {
-		log.Fatalf("Saving error %v", err)
+	newConfigPath := configsPath + fileName + ".yaml"
+	if err := config.WriteConfig(newConfigPath, newConfig); err != nil {
+		log.Fatalf("Ошибка сохранения конфига %v", err)
 	}
-	fmt.Printf("New trading config added successfully!")
+	fmt.Println(color.GreenString("👍 Конфиг успешно сохранен, удачной торговли!"))
 }
 
 func requestParameter(msg string, common string) string {
-	fmt.Printf("%s: (%s) ", msg, common)
 	for {
+		if common == "" {
+			fmt.Printf(color.BlueString(msg) + ": ")
+		} else {
+			fmt.Printf(color.BlueString(msg)+": (%s) ", common)
+		}
 		if !scanner.Scan() {
 			if scanner.Err() == nil {
 				log.Fatalf("Ввод из консоли принудительно завершен")
@@ -100,10 +121,12 @@ func requestParameter(msg string, common string) string {
 		}
 		parameter := scanner.Text()
 		if parameter == "" {
+			if common == "" {
+				continue
+			}
 			return common
-		} else {
-			return parameter
 		}
+		return parameter
 	}
 }
 
@@ -162,23 +185,15 @@ func convertMoneyValue(moneyValue *api.MoneyValue) float64 {
 }
 
 func requestChoice(msg string, a []string) int {
-	fmt.Printf("%s:\n", msg)
 	if len(a) <= 0 {
 		log.Fatalf("Ошибка, передано 0 возможных значений")
 	}
-	for i, aa := range a {
-		fmt.Printf("%d. %s\n", i, aa)
-	}
 	for {
-		if !scanner.Scan() {
-			if scanner.Err() == nil {
-				log.Fatalf("Ввод из консоли принудительно завершен")
-			} else {
-				fmt.Println(color.YellowString("Не удалось прочитать из консоли"))
-				continue
-			}
+		for i, aa := range a {
+			fmt.Printf("%d. %s\n", i, aa)
 		}
-		n, err := strconv.Atoi(scanner.Text())
+		input := requestParameter(msg, "0")
+		n, err := strconv.Atoi(input)
 		if err != nil {
 			fmt.Println(color.YellowString("Ошибка конвертации в целое число"))
 			continue

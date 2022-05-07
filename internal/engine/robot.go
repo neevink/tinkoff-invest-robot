@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"golang.org/x/xerrors"
 
@@ -27,6 +28,9 @@ func (r *investRobot) Run(ctx context.Context, share string) error {
 	}
 
 	acc, err := s.GetAccounts()
+	if err != nil {
+		log.Fatalf("Can't receive accounts info")
+	}
 	fmt.Printf("%v", acc)
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 
 	"golang.org/x/xerrors"
@@ -14,19 +15,20 @@ var (
 	writeMode = fs.FileMode(0755)
 )
 
-type Config struct {
-	TinkoffApiEndpoint string `yaml:"tinkoff_api_endpoint"`
-	AccessToken        string `yaml:"access_token"`
-	AccountId          string `yaml:"account_id"`
-	Figi               string `yaml:"figi"`
+type Share struct {
+	Ticker string `yaml:"ticker"`
+	Figi   string `yaml:"figi"`
 }
 
-func NewConfig() *Config {
-	return &Config{}
+type Config struct {
+	TinkoffApiEndpoint string  `yaml:"tinkoff_api_endpoint"`
+	AccessToken        string  `yaml:"access_token"`
+	AccountId          string  `yaml:"account_id"`
+	Shares             []Share `yaml:"shares"`
 }
 
 func LoadConfig(filename string) *Config {
-	config := NewConfig()
+	config := &Config{}
 	yamlData, err := ioutil.ReadFile(filename)
 	if err != nil {
 		log.Fatalf("Ошибка чтения конфига из файла: %v", err)
@@ -39,6 +41,10 @@ func LoadConfig(filename string) *Config {
 }
 
 func LoadConfigsFromDir(directoryPath string) []*Config {
+	err := os.MkdirAll(directoryPath, 0755)
+	if err != nil {
+		log.Fatalf("Ошибка создания папки для сгенерированных конфигов: %v", err)
+	}
 	files, err := ioutil.ReadDir(directoryPath)
 	configs := make([]*Config, 0)
 	if err != nil {

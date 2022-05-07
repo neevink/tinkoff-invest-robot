@@ -1,5 +1,8 @@
-# DO NOT EDIT
-tinkoff_api_endpoint: "invest-public-api.tinkoff.ru:443"
-access_token: "t.1U5XY4-R-_7nDh0SrXcXdC_GiomuYMcLTRulJdRG53UhaHy7YuHZnGHbjFg8wumgv65wxOX3aysUe9Absw9S8Q"
+tinkoff_api_endpoint: invest-public-api.tinkoff.ru:443
+access_token: "#"
 account_id: "0"
-figi: "BBG005DXJS36"
+shares:
+  - ticker: TCS
+    figi: BBG005DXJS36
+  - ticker: MOEX
+    figi: BBG004730JJ5
