@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var (
+const (
 	writeMode = fs.FileMode(0755)
 )
 
@@ -27,6 +27,12 @@ type Config struct {
 	Shares             []Share `yaml:"shares"`
 }
 
+type TradingConfig struct { // per ticker config
+	AccountId string `yaml:"account_id"`
+	Figi      string `yaml:"figi"`
+	Strategy  string `yaml:"strategy"`
+}
+
 func LoadConfig(filename string) *Config {
 	config := &Config{}
 	yamlData, err := ioutil.ReadFile(filename)
@@ -40,19 +46,32 @@ func LoadConfig(filename string) *Config {
 	return config
 }
 
-func LoadConfigsFromDir(directoryPath string) []*Config {
-	err := os.MkdirAll(directoryPath, 0755)
+func LoadTradingsConfig(filename string) *TradingConfig {
+	config := &TradingConfig{}
+	yamlData, err := ioutil.ReadFile(filename)
+	if err != nil {
+		log.Fatalf("Ошибка чтения конфига из файла: %v", err)
+	}
+	err = yaml.Unmarshal(yamlData, &config)
+	if err != nil {
+		log.Fatalf("Ошибка преобразования конфига: %v", err)
+	}
+	return config
+}
+
+func LoadTradingConfigsFromDir(directoryPath string) []*TradingConfig {
+	err := os.MkdirAll(directoryPath, writeMode)
 	if err != nil {
 		log.Fatalf("Ошибка создания папки для сгенерированных конфигов: %v", err)
 	}
 	files, err := ioutil.ReadDir(directoryPath)
-	configs := make([]*Config, 0)
+	configs := make([]*TradingConfig, 0)
 	if err != nil {
 		log.Fatalf("Ошибка чтения папки с конфигами: %v", err)
 	}
 	for _, f := range files {
 		if !f.IsDir() && strings.HasSuffix(f.Name(), ".yaml") {
-			configs = append(configs, LoadConfig(directoryPath+f.Name()))
+			configs = append(configs, LoadTradingsConfig(directoryPath+f.Name()))
 		}
 	}
 	return configs
