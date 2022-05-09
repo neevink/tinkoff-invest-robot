@@ -12,7 +12,7 @@ type Stretegy struct {
 	Description string
 }
 
-var strategiesList = []Stretegy{
+var strategiesList = []Stretegy{ // nolint
 	{
 		Id:          "mov_avg",
 		Name:        "Moving average",

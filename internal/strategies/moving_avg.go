@@ -16,6 +16,7 @@ type MovingAvgStrategy struct {
 
 func NewMovingAvgStrategy(tradingConf *config.TradingConfig, s *investsdk.SDK) *MovingAvgStrategy {
 	return &MovingAvgStrategy{
+		avgPrice:      0,
 		thresholdPerc: 2, // 2%
 		tradingConf:   tradingConf,
 		sdk:           s,
@@ -28,7 +29,8 @@ func (a *MovingAvgStrategy) Start() error {
 		return err
 	}
 	fmt.Printf("Robot started\n")
-	fmt.Printf("%d\n", price.Price.Units)
+	investsdk.PrintQuotation(price.Price)
+	fmt.Printf("\n")
 	return nil
 }
 
