@@ -1,9 +1,7 @@
 package engine
 
 import (
-	"context"
-	"fmt"
-	"log"
+	"tinkoff-invest-bot/internal/strategies"
 
 	"golang.org/x/xerrors"
 
@@ -12,25 +10,41 @@ import (
 )
 
 type investRobot struct {
-	config *config.Config
+	config   *config.Config
+	strategy strategies.TradingStrategy
 }
 
-func New(config *config.Config) *investRobot {
+func New(conf *config.Config, tradingConf *config.TradingConfig) (*investRobot, error) {
+	s, err := sdk.New(conf.TinkoffApiEndpoint, conf.AccessToken)
+	if err != nil {
+		return nil, xerrors.Errorf("can't init sdk: %v", err)
+	}
+
+	strategy, err := strategies.FromConfig(tradingConf, s)
+	if err != nil {
+		return nil, err
+	}
+
 	return &investRobot{
-		config: config,
-	}
+		config:   conf,
+		strategy: strategy,
+	}, nil
 }
 
-func (r *investRobot) Run(ctx context.Context, share string) error {
-	s, err := sdk.New(r.config.TinkoffApiEndpoint, r.config.AccessToken)
+func (r *investRobot) Run() error {
+	err := r.strategy.Start()
 	if err != nil {
-		return xerrors.Errorf("can't init sdk: %v", err)
+		return xerrors.Errorf("can't start robot strategy")
 	}
 
-	acc, err := s.GetAccounts()
+	err = r.strategy.Step()
 	if err != nil {
-		log.Fatalf("Can't receive accounts info")
+		return xerrors.Errorf("can't step robot strategy")
 	}
-	fmt.Printf("%v", acc)
+
+	err = r.strategy.Stop()
+	if err != nil {
+		return xerrors.Errorf("can't stop robot strategy")
+	}
 	return nil
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 
@@ -12,17 +11,18 @@ import (
 func main() {
 	robotConfig := config.LoadConfig("./configs/robot.yaml")
 
-	tradingConfigs := config.LoadConfigsFromDir("./generated/")
+	tradingConfigs := config.LoadTradingConfigsFromDir("./configs/generated/")
 
 	fmt.Println("Parsed trading configs:")
 	for _, conf := range tradingConfigs {
 		fmt.Printf("%v\n", conf)
 	}
 
-	ctx := context.Background()
-
-	robotInstance := engine.New(robotConfig)
-	if err := robotInstance.Run(ctx, "YNDX"); err != nil {
+	robotInstance, err := engine.New(robotConfig, tradingConfigs[0])
+	if err != nil {
+		log.Fatalf("Cant create robot instance: %v", err)
+	}
+	if err := robotInstance.Run(); err != nil {
 		log.Fatalf("InvestRobot finished with error: %v", err)
 	}
 }

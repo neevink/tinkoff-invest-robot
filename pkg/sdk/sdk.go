@@ -14,7 +14,7 @@ import (
 	api "tinkoff-invest-bot/investapi"
 )
 
-type sdk struct {
+type SDK struct {
 	ctx  context.Context
 	conn *grpc.ClientConn
 
@@ -28,7 +28,7 @@ type sdk struct {
 	users            api.UsersServiceClient
 }
 
-func New(address string, token string) (*sdk, error) {
+func New(address string, token string) (*SDK, error) {
 	conn, err := grpc.Dial(
 		address,
 		grpc.WithTransportCredentials(
@@ -42,7 +42,7 @@ func New(address string, token string) (*sdk, error) {
 	md := metadata.New(map[string]string{"Authorization": "Bearer " + token})
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
 
-	return &sdk{
+	return &SDK{
 		ctx:  ctx,
 		conn: conn,
 
@@ -57,7 +57,7 @@ func New(address string, token string) (*sdk, error) {
 	}, nil
 }
 
-func (s *sdk) GetTradingSchedules() ([]*api.TradingSchedule, error) {
+func (s *SDK) GetTradingSchedules() ([]*api.TradingSchedule, error) {
 	return nil, xerrors.Errorf("not implemented error")
 
 	//request := &api.TradingSchedulesRequest{
@@ -70,7 +70,7 @@ func (s *sdk) GetTradingSchedules() ([]*api.TradingSchedule, error) {
 	//return r.GetExchanges(), nil
 }
 
-func (s *sdk) GetShares() ([]*api.Share, error) {
+func (s *SDK) GetShares() ([]*api.Share, error) {
 	request := &api.InstrumentsRequest{
 		InstrumentStatus: api.InstrumentStatus_INSTRUMENT_STATUS_BASE, // only base is accessible for trading via api
 	}
@@ -81,7 +81,7 @@ func (s *sdk) GetShares() ([]*api.Share, error) {
 	return r.GetInstruments(), nil
 }
 
-func (s *sdk) GetInstrumentByFigi(figi string) (*api.Instrument, error) {
+func (s *SDK) GetInstrumentByFigi(figi string) (*api.Instrument, error) {
 	request := &api.InstrumentRequest{
 		IdType: api.InstrumentIdType_INSTRUMENT_ID_TYPE_FIGI,
 		Id:     figi,
@@ -93,7 +93,7 @@ func (s *sdk) GetInstrumentByFigi(figi string) (*api.Instrument, error) {
 	return r.GetInstrument(), nil
 }
 
-func (s *sdk) GetLastPrices(figi []string) ([]*api.LastPrice, error) {
+func (s *SDK) GetLastPrices(figi []string) ([]*api.LastPrice, error) {
 	// figi it's id of share, looks like "BBG002293PJ4"
 	r, err := s.marketData.GetLastPrices(s.ctx, &api.GetLastPricesRequest{Figi: figi})
 	if err != nil {
@@ -102,7 +102,15 @@ func (s *sdk) GetLastPrices(figi []string) ([]*api.LastPrice, error) {
 	return r.GetLastPrices(), nil
 }
 
-func (s *sdk) GetLastPricesAll() ([]*api.LastPrice, error) {
+func (s *SDK) GetLastPrice(figi string) (*api.LastPrice, error) {
+	r, err := s.marketData.GetLastPrices(s.ctx, &api.GetLastPricesRequest{Figi: []string{figi}})
+	if err != nil {
+		return nil, err
+	}
+	return r.GetLastPrices()[0], nil
+}
+
+func (s *SDK) GetLastPricesAll() ([]*api.LastPrice, error) {
 	r, err := s.marketData.GetLastPrices(s.ctx, &api.GetLastPricesRequest{})
 	if err != nil {
 		return nil, err
@@ -110,7 +118,7 @@ func (s *sdk) GetLastPricesAll() ([]*api.LastPrice, error) {
 	return r.GetLastPrices(), nil
 }
 
-func (s *sdk) GetCandles(figi string, from time.Time, to time.Time, interval api.CandleInterval) ([]*api.HistoricCandle, error) {
+func (s *SDK) GetCandles(figi string, from time.Time, to time.Time, interval api.CandleInterval) ([]*api.HistoricCandle, error) {
 	mr := &api.GetCandlesRequest{
 		Figi:     figi,
 		From:     timestamppb.New(from),
@@ -124,7 +132,7 @@ func (s *sdk) GetCandles(figi string, from time.Time, to time.Time, interval api
 	return r.GetCandles(), nil
 }
 
-func (s *sdk) GetOrderBook(figi string, depth int32) (*api.GetOrderBookResponse, error) {
+func (s *SDK) GetOrderBook(figi string, depth int32) (*api.GetOrderBookResponse, error) {
 	var or api.GetOrderBookRequest
 	or.Figi = figi
 	or.Depth = depth
@@ -141,7 +149,7 @@ func (s *sdk) GetOrderBook(figi string, depth int32) (*api.GetOrderBookResponse,
 	return r, nil
 }
 
-func (s *sdk) GetAccounts() ([]*api.Account, error) {
+func (s *SDK) GetAccounts() ([]*api.Account, error) {
 	resp, err := s.users.GetAccounts(s.ctx, &api.GetAccountsRequest{})
 	if err != nil {
 		return nil, err
@@ -149,17 +157,17 @@ func (s *sdk) GetAccounts() ([]*api.Account, error) {
 	return resp.Accounts, nil
 }
 
-func (s *sdk) GetMarginAttributes(accountId string) (*api.GetMarginAttributesResponse, error) {
+func (s *SDK) GetMarginAttributes(accountId string) (*api.GetMarginAttributesResponse, error) {
 	return s.users.GetMarginAttributes(s.ctx, &api.GetMarginAttributesRequest{
 		AccountId: accountId,
 	})
 }
 
-func (s *sdk) GetUserInfo() (*api.GetInfoResponse, error) {
+func (s *SDK) GetUserInfo() (*api.GetInfoResponse, error) {
 	return s.users.GetInfo(s.ctx, &api.GetInfoRequest{})
 }
 
-func (s *sdk) GetOperations(accountId string, from time.Time, to time.Time, figi string) ([]*api.Operation, error) {
+func (s *SDK) GetOperations(accountId string, from time.Time, to time.Time, figi string) ([]*api.Operation, error) {
 	var or api.OperationsRequest
 	or.AccountId = accountId
 
@@ -177,13 +185,13 @@ func (s *sdk) GetOperations(accountId string, from time.Time, to time.Time, figi
 	return r.GetOperations(), nil
 }
 
-func (s *sdk) GetPortfolio(accountId string) (*api.PortfolioResponse, error) {
+func (s *SDK) GetPortfolio(accountId string) (*api.PortfolioResponse, error) {
 	return s.operations.GetPortfolio(s.ctx, &api.PortfolioRequest{
 		AccountId: accountId,
 	})
 }
 
-//func (s *sdk) GetShareInfo() (*api.Instrument, error) {
+//func (s *SDK) GetShareInfo() (*api.Instrument, error) {
 //	resp, err := s.instruments.GetInstrumentBy(s.ctx, &api.InstrumentRequest{
 //		IdType: api.InstrumentIdType_INSTRUMENT_ID_TYPE_FIGI,
 //	})
