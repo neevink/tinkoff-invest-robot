@@ -21,7 +21,6 @@ func init() {
 
 // Получает переменную окружения по ключу
 func getEnv(key string, defaultValue string) string {
-	// TODO fix чтобы из переменных окружения тоже грузилось)
 	if value, exists := os.LookupEnv(key); exists {
 		return value
 	}

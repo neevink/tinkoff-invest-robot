@@ -10,12 +10,12 @@ import (
 )
 
 type investRobot struct {
-	config   *config.Config
+	config   *config.RobotConfig
 	strategy strategies.TradingStrategy
 }
 
-func New(conf *config.Config, tradingConf *config.TradingConfig) (*investRobot, error) {
-	s, err := sdk.New(conf.TinkoffApiEndpoint, conf.AccessToken)
+func New(conf *config.RobotConfig, tradingConf *config.TradingConfig) (*investRobot, error) {
+	s, err := sdk.New(conf.TinkoffApiEndpoint, conf.TinkoffAccessToken)
 	if err != nil {
 		return nil, xerrors.Errorf("can't init sdk: %v", err)
 	}

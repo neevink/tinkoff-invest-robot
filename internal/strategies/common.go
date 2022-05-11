@@ -21,11 +21,11 @@ var strategiesList = []Stretegy{ // nolint
 }
 
 func FromConfig(conf *config.TradingConfig, s *investsdk.SDK) (TradingStrategy, error) {
-	switch conf.Strategy {
+	switch conf.Strategy.Name {
 	case "mov_avg":
 		var movAvg TradingStrategy = NewMovingAvgStrategy(conf, s)
 		return movAvg, nil
 	default:
-		return nil, xerrors.Errorf("no strategy with name %s", conf.Strategy)
+		return nil, xerrors.Errorf("no strategy with name %v", conf.Strategy)
 	}
 }

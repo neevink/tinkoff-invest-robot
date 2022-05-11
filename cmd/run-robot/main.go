@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	robotConfig := config.LoadConfig("./configs/robot.yaml")
+	robotConfig := config.LoadRobotConfig("./configs/robot.yaml")
 
 	tradingConfigs := config.LoadTradingConfigsFromDir("./configs/generated/")
 

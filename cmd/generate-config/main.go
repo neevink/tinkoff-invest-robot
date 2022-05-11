@@ -27,14 +27,15 @@ const (
 )
 
 func main() {
-	fmt.Println(color.GreenString("🤖 Генератор конфига для торгового робота запущен!"))
+	// TODO работают ли емоджи на линухе?
+	fmt.Println(color.GreenString("\U0001F916 Генератор конфига для торгового робота запущен!"))
 	fmt.Println("Робот создан для торговли", color.MagentaString("базовыми акциями 📈"), "на MOEX и SPB")
-	fmt.Println("Еще немного текста который можно в любой момент изменить 💫")
+	fmt.Println("Еще", color.MagentaString("немного текста"), "который можно в любой момент изменить 💫")
 
 	// Инициализация SDK
 	robotConfig := config.LoadRobotConfig(robotConfigPath)
 	if robotConfig.TinkoffAccessToken == "" {
-		log.Fatalf("Добавьте токен доступа (параметр TINKOFF_ACCESS_TOKEN) в .env")
+		log.Fatalf("Токен доступа (TINKOFF_ACCESS_TOKEN) не был найден в .env")
 	}
 
 	s, err := sdk.New(robotConfig.TinkoffApiEndpoint, robotConfig.TinkoffAccessToken)
@@ -50,7 +51,7 @@ func main() {
 	invalidAccounts := 0
 	var accountsInfo []string
 	for _, account := range accounts {
-		// Проверка доступа к аккаунту
+		// Фильтрация аккаунтов на валидные и нет
 		if account.GetType() == api.AccountType_ACCOUNT_TYPE_UNSPECIFIED ||
 			account.GetStatus() != api.AccountStatus_ACCOUNT_STATUS_OPEN ||
 			account.GetAccessLevel() != api.AccessLevel_ACCOUNT_ACCESS_LEVEL_FULL_ACCESS {
@@ -78,13 +79,13 @@ func main() {
 
 	// Выбор аккаунта для торговли
 	if invalidAccounts > 0 {
-		fmt.Printf(color.YellowString("Найдено невалидных аккаунтов для торговли")+": %d\n", invalidAccounts)
+		fmt.Printf(color.YellowString("Найдено аккаунтов без возможности торговли")+": %d\n", invalidAccounts)
 	}
 	n := requestChoice("👤 Выберите аккаунт для торговли", accountsInfo)
 	account := accounts[n]
 
 	// Конфигурация стратегии
-	// TODO задание параметров стратегии из консоли
+	// TODO выбор и задание параметров стратегии (будет использоваться StrategyList)
 	strategy := config.Strategy{
 		Name: "",
 		StrategyConfig: config.StrategyConfig{
@@ -98,9 +99,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Не удается получить информацию об акциях: %v", err)
 	}
-	input := requestParameter("🛍 Введите тикеры акций для торговли", "")
-	var tickers []string
-	tickers = strings.Split(input, " ")
+	input := requestParameter("🛍 Введите тикеры акций для торговли", true)
+	tickers := strings.Split(input, " ")
 	for i := 0; i < len(tickers); i++ {
 		tickers[i] = strings.ToUpper(tickers[i])
 	}
@@ -108,37 +108,38 @@ func main() {
 TickerLoop:
 	// Создание конфигурации для каждой акции
 	for _, ticker := range tickers {
-		for _, share := range responseShares {
-			if share.GetTicker() == ticker {
-				tradingConfig := config.TradingConfig{
-					AccountId: account.GetId(),
-					Ticker:    ticker,
-					Figi:      share.GetFigi(),
-					Strategy:  strategy,
+		for {
+			for _, share := range responseShares {
+				if share.GetTicker() == ticker {
+					tradingConfig := config.TradingConfig{
+						AccountId: account.GetId(),
+						Ticker:    ticker,
+						Figi:      share.GetFigi(),
+						Strategy:  strategy,
+					}
+					filename := ticker + "_" + account.GetId() + ".yaml"
+					err := config.WriteTradingConfig(configsPath, filename, &tradingConfig)
+					if err != nil {
+						fmt.Println(color.YellowString("Торговая конфигурация %s не была записана %v", filename, err))
+					}
+					continue TickerLoop
 				}
-				filename := ticker + "_" + account.GetId() + ".yaml"
-				err := config.WriteTradingConfig(configsPath, filename, &tradingConfig)
-				if err != nil {
-					fmt.Println(color.YellowString("Торговая конфигурация %s не была записана %v", filename, err))
-				}
+			}
+			fmt.Println(color.YellowString("Инструмент с тикером \"" + ticker + "\" не найден!"))
+			ticker = strings.ToUpper(requestParameter("🖍 Уточните или пропустите тикер", false))
+			if ticker == "" {
 				continue TickerLoop
 			}
 		}
-		fmt.Println(color.YellowString("Инструмент с тикером \"" + ticker + "\" не найден!"))
-		// TODO предложить исправить название или пропустить (я гений)
 	}
 
-	fmt.Println(color.GreenString("👍 Конфиги успешно сохраны, удачной торговли!"))
+	fmt.Println(color.GreenString("👍 Удачной торговли!"))
 }
 
 // Запросить у пользователя параметр в виде строки
-func requestParameter(msg string, common string) string {
+func requestParameter(msg string, required bool) string {
 	for {
-		if common == "" {
-			fmt.Printf(color.BlueString(msg) + ": ")
-		} else {
-			fmt.Printf(color.BlueString(msg)+": (%s) ", common)
-		}
+		fmt.Printf(color.BlueString(msg) + ": ")
 		if !scanner.Scan() {
 			if scanner.Err() == nil {
 				log.Fatalf("Ввод из консоли принудительно завершен")
@@ -148,12 +149,9 @@ func requestParameter(msg string, common string) string {
 			}
 		}
 		parameter := scanner.Text()
-		if parameter == "" {
-			if common == "" {
-				fmt.Println(color.YellowString("Этот параметр является обязательным"))
-				continue
-			}
-			return common
+		if required && parameter == "" {
+			fmt.Println(color.YellowString("Этот параметр является обязательным"))
+			continue
 		}
 		return parameter
 	}
@@ -168,7 +166,7 @@ func requestChoice(msg string, a []string) int {
 		fmt.Printf("%d. %s\n", i, aa)
 	}
 	for {
-		input := requestParameter(msg, "")
+		input := requestParameter(msg, true)
 		n, err := strconv.Atoi(input)
 		if err != nil {
 			fmt.Println(color.YellowString("Ошибка конвертации в целое число"))
