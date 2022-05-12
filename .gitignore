@@ -8,3 +8,5 @@ investapi/*.go
 run-robot
 generate-config
 configs/generated/
+
+.env
