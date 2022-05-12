@@ -14,7 +14,7 @@ import "google/protobuf/timestamp.proto";
 
 service OrdersStreamService {
   //Stream сделок пользователя
-  rpc TradesStream(TradesStreamRequest) returns (stream TradesStreamResponse);
+  rpc TradesStream(TradesStreamRequest) returns (stream TradesStreamResponse); //
 }
 
 service OrdersService {/* Сервис предназначен для работы с торговыми поручениями:</br> **1**.

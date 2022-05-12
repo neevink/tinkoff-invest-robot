@@ -23,19 +23,29 @@ func NewMovingAvgStrategy(tradingConf *config.TradingConfig, s *investsdk.SDK) *
 	}
 }
 
+func (a *MovingAvgStrategy) Name() string {
+	return "Moving average"
+}
+
 func (a *MovingAvgStrategy) Start() error {
 	price, err := a.sdk.GetLastPrice(a.tradingConf.Figi)
 	if err != nil {
 		return err
 	}
 	fmt.Printf("Robot started\n")
+
 	investsdk.PrintQuotation(price.Price)
 	fmt.Printf("\n")
+
 	return nil
 }
 
 func (a *MovingAvgStrategy) Step() error {
 	fmt.Printf("Robot steped\n")
+	err := a.sdk.GetMarketDataStream(a.tradingConf.Figi)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

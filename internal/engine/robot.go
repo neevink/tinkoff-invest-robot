@@ -1,20 +1,22 @@
 package engine
 
 import (
-	"tinkoff-invest-bot/internal/strategies"
-
+	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 
 	"tinkoff-invest-bot/internal/config"
+	"tinkoff-invest-bot/internal/strategies"
 	"tinkoff-invest-bot/pkg/sdk"
 )
 
 type investRobot struct {
-	config   *config.Config
-	strategy strategies.TradingStrategy
+	config      *config.Config
+	tradingConf *config.TradingConfig
+	strategy    strategies.TradingStrategy
+	logger      *zap.Logger
 }
 
-func New(conf *config.Config, tradingConf *config.TradingConfig) (*investRobot, error) {
+func New(conf *config.Config, tradingConf *config.TradingConfig, logger *zap.Logger) (*investRobot, error) {
 	s, err := sdk.New(conf.TinkoffApiEndpoint, conf.AccessToken)
 	if err != nil {
 		return nil, xerrors.Errorf("can't init sdk: %v", err)
@@ -26,25 +28,33 @@ func New(conf *config.Config, tradingConf *config.TradingConfig) (*investRobot, 
 	}
 
 	return &investRobot{
-		config:   conf,
-		strategy: strategy,
+		config:      conf,
+		tradingConf: tradingConf,
+		strategy:    strategy,
+		logger:      logger,
 	}, nil
 }
 
 func (r *investRobot) Run() error {
 	err := r.strategy.Start()
 	if err != nil {
-		return xerrors.Errorf("can't start robot strategy")
+		return xerrors.Errorf("can't start robot strategy, %v", err)
 	}
+
+	r.logger.Info(
+		"Invest robot successfully run",
+		zap.String("figi", r.tradingConf.Figi),
+		zap.String("strategy", r.strategy.Name()),
+	)
 
 	err = r.strategy.Step()
 	if err != nil {
-		return xerrors.Errorf("can't step robot strategy")
+		return xerrors.Errorf("can't step robot strategy, %v", err)
 	}
 
 	err = r.strategy.Stop()
 	if err != nil {
-		return xerrors.Errorf("can't stop robot strategy")
+		return xerrors.Errorf("can't stop robot strategy, %v", err)
 	}
 	return nil
 }
