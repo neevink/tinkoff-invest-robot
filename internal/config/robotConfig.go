@@ -1,34 +1,24 @@
 package config
 
 import (
-	"gopkg.in/yaml.v3"
-	"io/ioutil"
 	"log"
+
+	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type RobotConfig struct {
-	TinkoffAccessToken string
+	TinkoffAccessToken string `env:"TINKOFF_ACCESS_TOKEN"`
 	TinkoffApiEndpoint string `yaml:"tinkoff_api_endpoint"`
 	// TODO БД
 }
 
-func NewRobotConfig() *RobotConfig {
-	return &RobotConfig{
-		TinkoffAccessToken: getEnv("TINKOFF_ACCESS_TOKEN", ""),
-		TinkoffApiEndpoint: "",
-	}
-}
+var robotCfg RobotConfig
 
 // LoadRobotConfig Загружает конфигурацию робота из файла
 func LoadRobotConfig(filename string) *RobotConfig {
-	robotConfig := NewRobotConfig()
-	yamlData, err := ioutil.ReadFile(filename)
+	err := cleanenv.ReadConfig(filename, &robotCfg)
 	if err != nil {
-		log.Fatalf("Ошибка чтения конфигурации робота из файла: %v", err)
+		log.Fatalf("Ошибка чтения конфигурации робота %s: %v", filename, err)
 	}
-	err = yaml.Unmarshal(yamlData, &robotConfig)
-	if err != nil {
-		log.Fatalf("Ошибка преобразования конфигурации робота: %v", err)
-	}
-	return robotConfig
+	return &robotCfg
 }

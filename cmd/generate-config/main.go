@@ -3,12 +3,13 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/fatih/color"
 	"log"
 	"math"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/fatih/color"
 
 	api "tinkoff-invest-bot/investapi"
 
@@ -27,9 +28,8 @@ const (
 )
 
 func main() {
-	// TODO работают ли емоджи на линухе?
-	fmt.Println(color.GreenString("\U0001F916 Генератор конфига для торгового робота запущен!"))
-	fmt.Println("Робот создан для торговли", color.MagentaString("базовыми акциями 📈"), "на MOEX и SPB")
+	fmt.Println(color.GreenString("🤖 Генератор конфига для торгового робота запущен!"))
+	fmt.Println("Робот создан для торговли", color.MagentaString("базовыми акциями 📈"), "в Тинькофф Инвестиции")
 	fmt.Println("Еще", color.MagentaString("немного текста"), "который можно в любой момент изменить 💫")
 
 	// Инициализация SDK
@@ -116,6 +116,7 @@ TickerLoop:
 						Ticker:    ticker,
 						Figi:      share.GetFigi(),
 						Strategy:  strategy,
+						Exchange:  share.GetExchange(),
 					}
 					filename := ticker + "_" + account.GetId() + ".yaml"
 					err := config.WriteTradingConfig(configsPath, filename, &tradingConfig)

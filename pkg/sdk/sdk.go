@@ -57,17 +57,17 @@ func New(address string, token string) (*SDK, error) {
 	}, nil
 }
 
-func (s *SDK) GetTradingSchedules() ([]*api.TradingSchedule, error) {
-	return nil, xerrors.Errorf("not implemented error")
-
-	//request := &api.TradingSchedulesRequest{
-	//	// todo add paramethers here
-	//}
-	//r, err := s.instruments.TradingSchedules(s.ctx, request)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//return r.GetExchanges(), nil
+// GetTradingSchedules Получает расписание торгов на указанную дату
+func (s *SDK) GetTradingSchedules(time time.Time) ([]*api.TradingSchedule, error) {
+	request := &api.TradingSchedulesRequest{
+		From: timestamppb.New(time),
+		To:   timestamppb.New(time),
+	}
+	r, err := s.instruments.TradingSchedules(s.ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	return r.GetExchanges(), nil
 }
 
 func (s *SDK) GetShares() ([]*api.Share, error) {
