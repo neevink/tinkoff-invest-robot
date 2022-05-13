@@ -1,12 +1,14 @@
 package config
 
 import (
-	"golang.org/x/xerrors"
-	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/ilyakaznacheev/cleanenv"
+	"golang.org/x/xerrors"
+	"gopkg.in/yaml.v3"
 )
 
 type StrategyConfig struct {
@@ -20,39 +22,22 @@ type Strategy struct {
 }
 
 type TradingConfig struct {
-	AccountId string   `yaml:"account_id"`
-	Ticker    string   `yaml:"ticker"`
-	Figi      string   `yaml:"figi"`
-	Strategy  Strategy `yaml:"strategy"`
+	AccountId   string   `yaml:"account_id"`
+	Ticker      string   `yaml:"ticker"`
+	MaxQuantity int      `yaml:"max_quantity"`
+	Figi        string   `yaml:"figi"`
+	Exchange    string   `yaml:"exchange"`
+	Strategy    Strategy `yaml:"strategy"`
 }
 
-func NewTradingConfig() *TradingConfig {
-	return &TradingConfig{
-		AccountId: "",
-		Ticker:    "",
-		Figi:      "",
-		Strategy: Strategy{
-			Name: "",
-			StrategyConfig: StrategyConfig{
-				Threshold:    0,
-				CandlesCount: 0,
-			},
-		},
-	}
-}
+var tradingCfg TradingConfig
 
 // LoadTradingsConfig Загружает торговую конфигурацию из файла
 func LoadTradingsConfig(filename string) *TradingConfig {
-	config := NewTradingConfig()
-	yamlData, err := ioutil.ReadFile(filename)
-	if err != nil {
-		log.Fatalf("Ошибка чтения торговой конфигурации из файла: %v", err)
+	if err := cleanenv.ReadConfig(filename, tradingCfg); err != nil {
+		log.Fatalf("Ошибка чтения торговой конфигурации %s: %v", filename, err)
 	}
-	err = yaml.Unmarshal(yamlData, &config)
-	if err != nil {
-		log.Fatalf("Ошибка преобразования торговой конфигурации: %v", err)
-	}
-	return config
+	return &tradingCfg
 }
 
 // LoadTradingConfigsFromDir Загружает торговые конфигурации из папки

@@ -57,17 +57,17 @@ func New(address string, token string) (*SDK, error) {
 	}, nil
 }
 
-func (s *SDK) GetTradingSchedules() ([]*api.TradingSchedule, error) {
-	return nil, xerrors.Errorf("not implemented error")
-
-	//request := &api.TradingSchedulesRequest{
-	//	// todo add paramethers here
-	//}
-	//r, err := s.instruments.TradingSchedules(s.ctx, request)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//return r.GetExchanges(), nil
+// GetTradingSchedules Получает расписание торгов на указанную дату
+func (s *SDK) GetTradingSchedules(time time.Time) ([]*api.TradingSchedule, error) {
+	request := &api.TradingSchedulesRequest{
+		From: timestamppb.New(time),
+		To:   timestamppb.New(time),
+	}
+	r, err := s.instruments.TradingSchedules(s.ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	return r.GetExchanges(), nil
 }
 
 func (s *SDK) GetShares() ([]*api.Share, error) {
@@ -200,3 +200,46 @@ func (s *SDK) GetPortfolio(accountId string) (*api.PortfolioResponse, error) {
 //	}
 //	return resp.GetInstrument(), nil
 //}
+
+/*
+	МЕТОДЫ ПЕСОЧНИЦЫ
+*/
+
+// GetSandboxAccounts Получает все аккаунты в песочнице
+func (s *SDK) GetSandboxAccounts() ([]*api.Account, error) {
+	resp, err := s.sandbox.GetSandboxAccounts(s.ctx, &api.GetAccountsRequest{})
+	if err != nil {
+		return nil, err
+	}
+	return resp.Accounts, nil
+}
+
+// PostSandboxMarketOrder Выставляет маркет ордер (покупка по цене рынка)
+func (s *SDK) PostSandboxMarketOrder(figi string, quantity int64, isBuy bool, accountId string) (*api.PostOrderResponse, error) {
+	direction := api.OrderDirection_ORDER_DIRECTION_SELL
+	if isBuy {
+		direction = api.OrderDirection_ORDER_DIRECTION_BUY
+	}
+	resp, err := s.sandbox.PostSandboxOrder(s.ctx, &api.PostOrderRequest{
+		Figi:      figi,
+		Quantity:  quantity,
+		Price:     nil,
+		Direction: direction,
+		AccountId: accountId,
+		OrderType: api.OrderType_ORDER_TYPE_MARKET,
+		OrderId:   "",
+	})
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+// GetSandboxPositions Получает все активные позиции аккаунта
+func (s *SDK) GetSandboxPositions(accountId string) (*api.PositionsResponse, error) {
+	resp, err := s.sandbox.GetSandboxPositions(s.ctx, &api.PositionsRequest{AccountId: accountId})
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
