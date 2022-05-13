@@ -117,6 +117,8 @@ TickerLoop:
 						Figi:      share.GetFigi(),
 						Strategy:  strategy,
 						Exchange:  share.GetExchange(),
+						// TODO задание максимального количества лотов на акцию
+						MaxQuantity: 10,
 					}
 					filename := ticker + "_" + account.GetId() + ".yaml"
 					err := config.WriteTradingConfig(configsPath, filename, &tradingConfig)

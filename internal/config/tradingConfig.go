@@ -22,11 +22,12 @@ type Strategy struct {
 }
 
 type TradingConfig struct {
-	AccountId string   `yaml:"account_id"`
-	Figi      string   `yaml:"figi"`
-	Ticker    string   `yaml:"ticker"`
-	Exchange  string   `yaml:"exchange"`
-	Strategy  Strategy `yaml:"strategy"`
+	AccountId   string   `yaml:"account_id"`
+	Ticker      string   `yaml:"ticker"`
+	MaxQuantity int      `yaml:"max_quantity"`
+	Figi        string   `yaml:"figi"`
+	Exchange    string   `yaml:"exchange"`
+	Strategy    Strategy `yaml:"strategy"`
 }
 
 var tradingCfg TradingConfig
