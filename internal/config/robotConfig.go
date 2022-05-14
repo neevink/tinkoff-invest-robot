@@ -12,10 +12,9 @@ type RobotConfig struct {
 	// TODO БД
 }
 
-var robotCfg RobotConfig
-
 // LoadRobotConfig Загружает конфигурацию робота из файла
 func LoadRobotConfig(filename string) *RobotConfig {
+	var robotCfg RobotConfig
 	err := cleanenv.ReadConfig(filename, &robotCfg)
 	if err != nil {
 		log.Fatalf("Ошибка чтения конфигурации робота %s: %v", filename, err)
