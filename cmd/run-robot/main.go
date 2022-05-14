@@ -16,7 +16,7 @@ func main() {
 		log.Fatalf("Cant create production logger: %v", err)
 	}
 
-	robotConfig := config.LoadConfig("./configs/robot.yaml")
+	robotConfig := config.LoadRobotConfig("./configs/robot.yaml")
 
 	tradingConfigs := config.LoadTradingConfigsFromDir("./configs/generated/")
 

@@ -1,8 +1,0 @@
-tinkoff_api_endpoint: invest-public-api.tinkoff.ru:443
-access_token: "t.-FoU9b8G3wwP6ld6OXJPK7O2I2GJaWSN30K6KLEERCtWfhXsv3t0vtIXcdVxdpQ5FaiYMCNfJNhysAWg4wGXUA"
-account_id: "0"
-shares:
-  - ticker: TCS
-    figi: BBG005DXJS36
-  - ticker: MOEX
-    figi: BBG004730JJ5
