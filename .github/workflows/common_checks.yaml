@@ -8,14 +8,10 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: 1.17
-      - name: Verify dependencies
-        run: go mod verify
       - name: Install protoc
         uses: arduino/setup-protoc@v1
       - name: Setup dependencies
         run: make setup
-      - name: Compile protobufs
-        run: make compile-proto
       - name: Build
         run: make build
       - name: Setup linter and tester
