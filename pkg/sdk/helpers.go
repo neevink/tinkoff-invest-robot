@@ -8,11 +8,11 @@ import (
 )
 
 func PrintQuotation(q *investapi.Quotation) {
-	fmt.Printf("%d.%d", q.Units, q.Nano)
+	fmt.Printf("%f", QuotationToFloat(q))
 }
 
 func PrintMoneyValue(q *investapi.MoneyValue) {
-	fmt.Printf("%d.%d%s", q.Units, q.Nano, q.Currency)
+	fmt.Printf("%f%s", MoneyValueToFloat(q), q.Currency)
 }
 
 func GenerateOrderId() string {

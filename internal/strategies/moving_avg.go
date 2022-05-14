@@ -2,24 +2,37 @@ package strategies
 
 import (
 	"fmt"
+	"math"
 
 	"tinkoff-invest-bot/internal/config"
+	api "tinkoff-invest-bot/investapi"
 	investsdk "tinkoff-invest-bot/pkg/sdk"
 )
 
+type operation uint64
+
+const (
+	buy operation = iota
+	sell
+)
+
 type MovingAvgStrategy struct {
-	avgPrice      float64
 	tradingConf   *config.TradingConfig
 	thresholdPerc float64 // percents
 	sdk           *investsdk.SDK
+
+	startPrice    float64
+	nextOperation operation
 }
 
 func NewMovingAvgStrategy(tradingConf *config.TradingConfig, s *investsdk.SDK) *MovingAvgStrategy {
 	return &MovingAvgStrategy{
-		avgPrice:      0,
-		thresholdPerc: 2, // 2%
+		startPrice:    0,
+		thresholdPerc: 1,
 		tradingConf:   tradingConf,
 		sdk:           s,
+
+		nextOperation: buy,
 	}
 }
 
@@ -27,29 +40,54 @@ func (a *MovingAvgStrategy) Name() string {
 	return "Moving average"
 }
 
+func (a *MovingAvgStrategy) Consume(data *api.MarketDataResponse) {
+	lastPrice := data.GetLastPrice()
+	if lastPrice == nil {
+		return
+	}
+
+	if lastPrice.Figi != a.tradingConf.Figi {
+		return
+	}
+
+	price := investsdk.QuotationToFloat(lastPrice.GetPrice())
+
+	if a.nextOperation == buy && price < a.startPrice && math.Abs(a.startPrice-price)/a.startPrice > a.thresholdPerc {
+
+	}
+
+	if a.nextOperation == sell && price > a.startPrice && math.Abs(a.startPrice-price)/a.startPrice > a.thresholdPerc {
+
+	}
+
+	fmt.Printf("lastPrice figi %s is: %f\n", lastPrice.GetFigi(), investsdk.QuotationToFloat(lastPrice.GetPrice()))
+	investsdk.PrintQuotation(lastPrice.Price)
+	fmt.Printf("\n")
+
+}
+
 func (a *MovingAvgStrategy) Start() error {
+	fmt.Printf("Robot started\n")
+
+	var cons investsdk.TickerPriceConsumerInterface = a
+	err := a.sdk.SubscribeMarketData(a.tradingConf.Figi, &cons)
+	if err != nil {
+		return err
+	}
+
 	price, err := a.sdk.GetLastPrice(a.tradingConf.Figi)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Robot started\n")
-
-	investsdk.PrintQuotation(price.Price)
-	fmt.Printf("\n")
-
-	return nil
-}
-
-func (a *MovingAvgStrategy) Step() error {
-	fmt.Printf("Robot steped\n")
-	err := a.sdk.GetMarketDataStream(a.tradingConf.Figi)
-	if err != nil {
-		return err
-	}
+	a.startPrice = investsdk.QuotationToFloat(price.GetPrice())
 	return nil
 }
 
 func (a *MovingAvgStrategy) Stop() error {
+	var cons investsdk.TickerPriceConsumerInterface = a
+	if err := a.sdk.UnsubscribeMarketData(a.tradingConf.Figi, &cons); err != nil {
+		return err
+	}
 	fmt.Printf("Robot stopped\n")
 	return nil
 }

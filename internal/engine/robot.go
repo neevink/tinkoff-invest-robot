@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"time"
+
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 
@@ -19,6 +21,10 @@ type investRobot struct {
 func New(conf *config.Config, tradingConf *config.TradingConfig, logger *zap.Logger) (*investRobot, error) {
 	s, err := sdk.New(conf.TinkoffApiEndpoint, conf.AccessToken)
 	if err != nil {
+		return nil, xerrors.Errorf("can't init sdk: %v", err)
+	}
+
+	if s.Run(); err != nil {
 		return nil, xerrors.Errorf("can't init sdk: %v", err)
 	}
 
@@ -47,10 +53,7 @@ func (r *investRobot) Run() error {
 		zap.String("strategy", r.strategy.Name()),
 	)
 
-	err = r.strategy.Step()
-	if err != nil {
-		return xerrors.Errorf("can't step robot strategy, %v", err)
-	}
+	time.Sleep(60 * time.Second)
 
 	err = r.strategy.Stop()
 	if err != nil {
