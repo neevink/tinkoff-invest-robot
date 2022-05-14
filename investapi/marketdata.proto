@@ -32,7 +32,7 @@ service MarketDataService { //Сервис получения биржевой �
 
 service MarketDataStreamService {
   //Bi-directional стрим предоставления биржевой информации.
-  rpc MarketDataStream(stream MarketDataRequest) returns (stream MarketDataResponse); //
+  rpc MarketDataStream(stream MarketDataRequest) returns (stream MarketDataResponse);
 }
 
 //Запрос подписки или отписки на определённые биржевые данные.
