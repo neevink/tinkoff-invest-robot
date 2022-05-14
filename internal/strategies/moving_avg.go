@@ -53,16 +53,30 @@ func (a *MovingAvgStrategy) Consume(data *api.MarketDataResponse) {
 	price := investsdk.QuotationToFloat(lastPrice.GetPrice())
 
 	if a.nextOperation == buy && price < a.startPrice && math.Abs(a.startPrice-price)/a.startPrice > a.thresholdPerc {
-
+		_, err := a.sdk.PostSandboxMarketOrder(
+			a.tradingConf.Figi,
+			1,
+			true,
+			a.tradingConf.AccountId,
+		)
+		if err != nil {
+			a.nextOperation = sell
+		}
 	}
 
 	if a.nextOperation == sell && price > a.startPrice && math.Abs(a.startPrice-price)/a.startPrice > a.thresholdPerc {
-
+		_, err := a.sdk.PostSandboxMarketOrder(
+			a.tradingConf.Figi,
+			1,
+			false,
+			a.tradingConf.AccountId,
+		)
+		if err != nil {
+			a.nextOperation = buy
+		}
 	}
 
 	fmt.Printf("lastPrice figi %s is: %f\n", lastPrice.GetFigi(), investsdk.QuotationToFloat(lastPrice.GetPrice()))
-	investsdk.PrintQuotation(lastPrice.Price)
-	fmt.Printf("\n")
 
 }
 

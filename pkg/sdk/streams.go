@@ -2,10 +2,6 @@ package sdk
 
 import (
 	"fmt"
-	"io"
-	"log"
-	"time"
-
 	"golang.org/x/xerrors"
 
 	api "tinkoff-invest-bot/investapi"
@@ -84,62 +80,5 @@ func (s *SDK) UnsubscribeMarketData(figi string, consumer *TickerPriceConsumerIn
 		// add unsubscribe grpc request
 		delete(s.marketDataConsumers, figi)
 	}
-	return nil
-}
-
-func (s *SDK) startMarketDataStream(figi string) error {
-	stream, err := s.marketDataStream.MarketDataStream(s.ctx)
-	if err != nil {
-		return err
-	}
-
-	wait := make(chan struct{})
-	r := api.MarketDataRequest{
-		Payload: &api.MarketDataRequest_SubscribeLastPriceRequest{
-			SubscribeLastPriceRequest: &api.SubscribeLastPriceRequest{
-				SubscriptionAction: api.SubscriptionAction_SUBSCRIPTION_ACTION_SUBSCRIBE,
-				Instruments: []*api.LastPriceInstrument{
-					{Figi: figi},
-				},
-			},
-		},
-	}
-	if err := stream.Send(&r); err != nil {
-		return xerrors.Errorf("Failed to send subscribe request: %v", err)
-	}
-
-	go func() {
-		for {
-			in, err := stream.Recv()
-			if err == io.EOF {
-				close(wait)
-				return
-			}
-			if err != nil {
-				log.Fatalf("Failed to receive message : %v", err)
-			}
-			payload := in.GetPayload()
-			fmt.Printf("Payload: %v\n", payload)
-			switch payload.(type) {
-			case *api.MarketDataResponse_Ping:
-				a := payload.(*api.MarketDataResponse_Ping)
-				fmt.Printf("statis is %s\n", a.Ping)
-			case *api.MarketDataResponse_SubscribeLastPriceResponse:
-				a := payload.(*api.MarketDataResponse_SubscribeLastPriceResponse)
-				fmt.Printf("SubscribeLastPriceResponse is %v\n", a.SubscribeLastPriceResponse)
-			case *api.MarketDataResponse_LastPrice:
-				a := payload.(*api.MarketDataResponse_LastPrice)
-				PrintQuotation(a.LastPrice.Price)
-			default:
-				fmt.Printf("can't cast payload %v with type %T", payload, payload)
-			}
-		}
-	}()
-	time.Sleep(3 * time.Minute)
-	err = stream.CloseSend()
-	if err != nil {
-		return err
-	}
-	<-wait
 	return nil
 }
