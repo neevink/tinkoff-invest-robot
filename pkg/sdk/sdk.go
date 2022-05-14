@@ -3,6 +3,9 @@ package sdk
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
+	"io"
+	"log"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -26,6 +29,10 @@ type SDK struct {
 	sandbox          api.SandboxServiceClient
 	stopOrders       api.StopOrdersServiceClient
 	users            api.UsersServiceClient
+
+	marketDataStreamClient api.MarketDataStreamService_MarketDataStreamClient
+
+	marketDataConsumers map[string][]*TickerPriceConsumerInterface
 }
 
 func New(address string, token string) (*SDK, error) {
@@ -42,19 +49,56 @@ func New(address string, token string) (*SDK, error) {
 	md := metadata.New(map[string]string{"Authorization": "Bearer " + token})
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
 
+	marketDataStream := api.NewMarketDataStreamServiceClient(conn)
+	stream, err := marketDataStream.MarketDataStream(ctx)
+	if err != nil {
+		return nil, xerrors.Errorf("can't careate market date stream: %v", err)
+	}
+
 	return &SDK{
 		ctx:  ctx,
 		conn: conn,
 
 		instruments:      api.NewInstrumentsServiceClient(conn),
 		marketData:       api.NewMarketDataServiceClient(conn),
-		marketDataStream: api.NewMarketDataStreamServiceClient(conn),
+		marketDataStream: marketDataStream,
 		operations:       api.NewOperationsServiceClient(conn),
 		orders:           api.NewOrdersServiceClient(conn),
 		sandbox:          api.NewSandboxServiceClient(conn),
 		stopOrders:       api.NewStopOrdersServiceClient(conn),
 		users:            api.NewUsersServiceClient(conn),
+
+		marketDataStreamClient: stream,
+
+		marketDataConsumers: make(map[string][]*TickerPriceConsumerInterface, 0),
 	}, nil
+}
+
+func (s *SDK) Run() {
+	go func() {
+		for {
+			in, err := s.marketDataStreamClient.Recv()
+			if err == io.EOF {
+				log.Fatalf("Date stream closed")
+				return
+			}
+			if err != nil {
+				log.Fatalf("Failed to receive a note : %v", err)
+			}
+			payload := in.GetPayload()
+			fmt.Printf("Payload: %v\n", payload)
+
+			for _, consumers := range s.marketDataConsumers {
+				for _, c := range consumers {
+					(*c).Consume(in)
+				}
+			}
+		}
+	}()
+}
+
+func (s *SDK) Shutdown() error {
+	return nil
 }
 
 // GetTradingSchedules Получает расписание торгов на указанную дату

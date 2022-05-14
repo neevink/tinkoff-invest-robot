@@ -4,7 +4,7 @@ import (
 	"tinkoff-invest-bot/investapi"
 )
 
-func QuotationToFloat(q *investapi.Quotation) float64 { // nolint
+func QuotationToFloat(q *investapi.Quotation) float64 {
 	return float64(q.Units) + float64(q.Nano/1000000000)
 }
 
