@@ -16,13 +16,14 @@ all:
 	@echo "coverage			- Show test's coverage"
 	@exit 0
 
-build:
+build: compile-proto
 	go build -v ./cmd/run-robot/
 	go build -v ./cmd/generate-config/
 
 setup:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+	go mod verify
 
 setup-dev:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
@@ -31,7 +32,7 @@ clean:
 	rm -f $(TINKOFF_PROTO)/*.go
 	rm -f ./run-robot
 	rm -f ./generate-config
-	rm -f ./generated/*
+	rm -f ./configs/generated/*
 
 compile-proto:
 	make clean
@@ -47,4 +48,4 @@ tests:
 coverage:
 	go test -cover ./...
 
-.PHONY: all build setup setup-dev clean compile-proto lint tests coverage
+.PHONY: all build setup clean compile-proto lint tests coverage
