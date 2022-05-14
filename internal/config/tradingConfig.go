@@ -30,10 +30,9 @@ type TradingConfig struct {
 	Strategy    Strategy `yaml:"strategy"`
 }
 
-var tradingCfg TradingConfig
-
 // LoadTradingsConfig Загружает торговую конфигурацию из файла
 func LoadTradingsConfig(filename string) *TradingConfig {
+	var tradingCfg TradingConfig
 	if err := cleanenv.ReadConfig(filename, tradingCfg); err != nil {
 		log.Fatalf("Ошибка чтения торговой конфигурации %s: %v", filename, err)
 	}
@@ -73,6 +72,7 @@ func WriteTradingConfig(dirname string, filename string, config *TradingConfig) 
 	return nil
 }
 
+// Создает папку если еще не была создана
 func createDirIfNotExist(dirname string) error {
 	if _, err := os.Stat(dirname); os.IsNotExist(err) {
 		if err := os.Mkdir(dirname, writeMode); err != nil {
