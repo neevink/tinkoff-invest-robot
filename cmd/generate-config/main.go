@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"log"
 	"math"
@@ -11,9 +12,8 @@ import (
 
 	"github.com/fatih/color"
 
-	api "tinkoff-invest-bot/investapi"
-
 	"tinkoff-invest-bot/internal/config"
+	api "tinkoff-invest-bot/investapi"
 	"tinkoff-invest-bot/pkg/sdk"
 )
 
@@ -38,13 +38,16 @@ func main() {
 		log.Fatalf("Токен доступа (TINKOFF_ACCESS_TOKEN) не был найден в .env")
 	}
 
-	s, err := sdk.New(robotConfig.TinkoffApiEndpoint, robotConfig.TinkoffAccessToken)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	s, err := sdk.New(robotConfig.TinkoffApiEndpoint, robotConfig.TinkoffAccessToken, robotConfig.AppName, ctx)
 	if err != nil {
 		log.Fatalf("Не удается инициализировать SDK: %v", err)
 	}
 
 	// Формирование информации об аккаунтах
-	accounts, err := s.GetAccounts()
+	accounts, _, err := s.GetAccounts()
 	if err != nil {
 		log.Fatalf("Не удается получить информацию об аккаунтах: %v", err)
 	}
@@ -69,7 +72,7 @@ func main() {
 			accountInfo += "💰 "
 		}
 		accountInfo += account.GetName() + " "
-		portfolio, err := s.GetPortfolio(account.GetId())
+		portfolio, _, err := s.GetPortfolio(account.GetId())
 		if err != nil {
 			log.Fatalf("Не удается получить портфолио аккаунта %s: %v", account.GetId(), err)
 		}
@@ -86,16 +89,13 @@ func main() {
 
 	// Конфигурация стратегии
 	// TODO выбор и задание параметров стратегии (будет использоваться StrategyList)
-	strategy := config.Strategy{
-		Name: "",
-		StrategyConfig: config.StrategyConfig{
-			Threshold:    0,
-			CandlesCount: 0,
-		},
+	strategy := config.StrategyConfig{
+		Name:   "simple",
+		Config: make(map[string]string, 0),
 	}
 
 	// Выбор акций для торговли
-	responseShares, err := s.GetShares()
+	responseShares, _, err := s.GetShares()
 	if err != nil {
 		log.Fatalf("Не удается получить информацию об акциях: %v", err)
 	}

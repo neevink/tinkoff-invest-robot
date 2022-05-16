@@ -1,30 +1,9 @@
 package sdk
 
 import (
-	"fmt"
 	"golang.org/x/xerrors"
-
 	api "tinkoff-invest-bot/investapi"
 )
-
-type TickerPriceConsumer struct {
-	ticker string
-}
-
-func NewTickerPriceConsumer(ticker string) *TickerPriceConsumer {
-	return &TickerPriceConsumer{
-		ticker: ticker,
-	}
-}
-
-func (consumer *TickerPriceConsumer) Consume(data *api.MarketDataResponse) {
-	price := data.GetLastPrice()
-	if price != nil {
-		fmt.Printf("price figi %s is: \n", price.GetFigi())
-		PrintQuotation(price.Price)
-		fmt.Printf("\n")
-	}
-}
 
 func (s *SDK) SubscribeMarketData(figi string, consumer *TickerPriceConsumerInterface) error {
 	consumers, contains := s.marketDataConsumers[figi]

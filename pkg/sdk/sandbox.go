@@ -1,0 +1,115 @@
+package sdk
+
+import (
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
+
+	api "tinkoff-invest-bot/investapi"
+)
+
+// GetSandboxAccounts Получает все аккаунты в песочнице
+func (s *SDK) GetSandboxAccounts() ([]*api.Account, string, error) {
+	var header, trailer metadata.MD
+	resp, err := s.sandbox.GetSandboxAccounts(
+		s.ctx,
+		&api.GetAccountsRequest{},
+		grpc.Header(&header),
+		grpc.Trailer(&trailer),
+	)
+
+	trackingId := extractTrackingId(&header, &trailer)
+
+	if err != nil {
+		if extractedError := extractRequestError(&trailer); extractedError != nil {
+			return nil, trackingId, extractedError
+		}
+		return nil, trackingId, err
+	}
+	return resp.Accounts, trackingId, nil
+}
+
+func (s *SDK) SandboxMarketBuy(figi string, quantity int64, accountId string, orderId string) (*api.PostOrderResponse, string, error) {
+	return s.postSandboxMarketOrder(figi, quantity, true, accountId, orderId)
+}
+
+func (s *SDK) SandboxMarketSell(figi string, quantity int64, accountId string, orderId string) (*api.PostOrderResponse, string, error) {
+	return s.postSandboxMarketOrder(figi, quantity, false, accountId, orderId)
+}
+
+func (s *SDK) postSandboxMarketOrder(figi string, quantity int64, isBuy bool, accountId string, orderId string) (*api.PostOrderResponse, string, error) {
+	var header, trailer metadata.MD
+
+	direction := api.OrderDirection_ORDER_DIRECTION_SELL
+	if isBuy {
+		direction = api.OrderDirection_ORDER_DIRECTION_BUY
+	}
+
+	resp, err := s.sandbox.PostSandboxOrder(
+		s.ctx,
+		&api.PostOrderRequest{
+			Figi:      figi,
+			Quantity:  quantity,
+			Price:     nil,
+			Direction: direction,
+			AccountId: accountId,
+			OrderType: api.OrderType_ORDER_TYPE_MARKET,
+			OrderId:   orderId,
+		},
+		grpc.Header(&header),
+		grpc.Trailer(&trailer),
+	)
+
+	trackingId := extractTrackingId(&header, &trailer)
+
+	if err != nil {
+		if extractedError := extractRequestError(&trailer); extractedError != nil {
+			return nil, trackingId, extractedError
+		}
+		return nil, trackingId, err
+	}
+	return resp, trackingId, nil
+}
+
+// GetSandboxPositions Получает все активные позиции аккаунта
+func (s *SDK) GetSandboxPositions(accountId string) (*api.PositionsResponse, string, error) {
+	var header, trailer metadata.MD
+	resp, err := s.sandbox.GetSandboxPositions(
+		s.ctx,
+		&api.PositionsRequest{AccountId: accountId},
+		grpc.Header(&header),
+		grpc.Trailer(&trailer),
+	)
+
+	trackingId := extractTrackingId(&header, &trailer)
+
+	if err != nil {
+		if extractedError := extractRequestError(&trailer); extractedError != nil {
+			return nil, trackingId, extractedError
+		}
+		return nil, trackingId, err
+	}
+	return resp, trackingId, nil
+}
+
+func (s *SDK) GetSandboxPortfolio(accountId string) (*api.PortfolioResponse, string, error) {
+	var header, trailer metadata.MD
+
+	resp, err := s.sandbox.GetSandboxPortfolio(
+		s.ctx,
+		&api.PortfolioRequest{
+			AccountId: accountId,
+		},
+		grpc.Header(&header),
+		grpc.Trailer(&trailer),
+	)
+
+	trackingId := extractTrackingId(&header, &trailer)
+
+	if err != nil {
+		if extractedError := extractRequestError(&trailer); extractedError != nil {
+			return nil, trackingId, extractedError
+		}
+		return nil, trackingId, err
+	}
+	return resp, trackingId, nil
+}

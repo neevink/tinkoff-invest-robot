@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -12,28 +13,24 @@ import (
 )
 
 type StrategyConfig struct {
-	Threshold    int `yaml:"threshold"`
-	CandlesCount int `yaml:"candles_count"`
-}
-
-type Strategy struct {
-	Name           string         `yaml:"name"`
-	StrategyConfig StrategyConfig `yaml:"configuration"`
+	Name   string            `yaml:"name"`
+	Config map[string]string `yaml:"configuration"`
 }
 
 type TradingConfig struct {
-	AccountId   string   `yaml:"account_id"`
-	Ticker      string   `yaml:"ticker"`
-	MaxQuantity int      `yaml:"max_quantity"`
-	Figi        string   `yaml:"figi"`
-	Exchange    string   `yaml:"exchange"`
-	Strategy    Strategy `yaml:"strategy"`
+	AccountId   string         `yaml:"account_id"`
+	Ticker      string         `yaml:"ticker"`
+	MaxQuantity int            `yaml:"max_quantity"`
+	Figi        string         `yaml:"figi"`
+	Exchange    string         `yaml:"exchange"`
+	Strategy    StrategyConfig `yaml:"strategy"`
 }
 
 // LoadTradingsConfig Загружает торговую конфигурацию из файла
 func LoadTradingsConfig(filename string) *TradingConfig {
 	var tradingCfg TradingConfig
-	if err := cleanenv.ReadConfig(filename, tradingCfg); err != nil {
+	if err := cleanenv.ReadConfig(filename, &tradingCfg); err != nil {
+		fmt.Printf("%v", err)
 		log.Fatalf("Ошибка чтения торговой конфигурации %s: %v", filename, err)
 	}
 	return &tradingCfg
@@ -51,7 +48,8 @@ func LoadTradingConfigsFromDir(dirname string) []*TradingConfig {
 	}
 	for _, f := range files {
 		if !f.IsDir() && strings.HasSuffix(f.Name(), ".yaml") {
-			configs = append(configs, LoadTradingsConfig(dirname+f.Name()))
+			newCfg := LoadTradingsConfig(dirname + f.Name())
+			configs = append(configs, newCfg)
 		}
 	}
 	return configs

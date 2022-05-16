@@ -7,6 +7,7 @@ import (
 )
 
 type RobotConfig struct {
+	AppName            string `yaml:"app_name"`
 	TinkoffAccessToken string `env:"TINKOFF_ACCESS_TOKEN"`
 	TinkoffApiEndpoint string `yaml:"tinkoff_api_endpoint"`
 	// TODO БД

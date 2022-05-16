@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -25,11 +26,14 @@ func main() {
 		fmt.Printf("%v\n", conf)
 	}
 
-	robotInstance, err := engine.New(robotConfig, tradingConfigs[0], logger)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	robotInstance, err := engine.New(robotConfig, tradingConfigs[0], logger, ctx)
 	if err != nil {
-		log.Fatalf("Cant create robot instance: %v", err)
+		logger.Fatal("Cant create robot instance", zap.Error(err))
 	}
 	if err := robotInstance.Run(); err != nil {
-		log.Fatalf("InvestRobot finished with error: %v", err)
+		logger.Fatal("Cant create robot instance", zap.Error(err))
 	}
 }
