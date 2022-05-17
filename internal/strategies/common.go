@@ -8,11 +8,16 @@ import (
 	investsdk "tinkoff-invest-bot/pkg/sdk"
 )
 
-func FromConfig(conf *config.TradingConfig, s *investsdk.SDK, logger *zap.Logger) (*TradingStrategy, error) {
-	switch conf.Strategy.Name {
-	case "simple":
-		return NewSimpleStrategy(conf, s, logger), nil
-	default:
-		return nil, xerrors.Errorf("no strategy with name %v", conf.Strategy)
+var (
+	StrategyList = map[string]func(tradingConf *config.TradingConfig, s *investsdk.SDK, logger *zap.Logger) *TradingStrategy{
+		"simple": NewSimpleStrategy,
 	}
+)
+
+func FromConfig(conf *config.TradingConfig, s *investsdk.SDK, logger *zap.Logger) (*TradingStrategy, error) {
+	f := StrategyList[conf.Strategy.Name]
+	if f == nil {
+		return nil, xerrors.Errorf("no strategy with name %s", conf.Strategy.Name)
+	}
+	return f(conf, s, logger), nil
 }

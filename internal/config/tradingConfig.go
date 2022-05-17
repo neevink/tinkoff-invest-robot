@@ -18,12 +18,12 @@ type StrategyConfig struct {
 }
 
 type TradingConfig struct {
-	AccountId   string         `yaml:"account_id"`
-	Ticker      string         `yaml:"ticker"`
-	MaxQuantity int            `yaml:"max_quantity"`
-	Figi        string         `yaml:"figi"`
-	Exchange    string         `yaml:"exchange"`
-	Strategy    StrategyConfig `yaml:"strategy"`
+	AccountId string         `yaml:"account_id"`
+	Ticker    string         `yaml:"ticker"`
+	Figi      string         `yaml:"figi"`
+	Exchange  string         `yaml:"exchange"`
+	Interval  string         `yaml:"interval"`
+	Strategy  StrategyConfig `yaml:"strategy"`
 }
 
 // LoadTradingsConfig Загружает торговую конфигурацию из файла

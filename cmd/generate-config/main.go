@@ -12,6 +12,7 @@ import (
 	"github.com/fatih/color"
 
 	"tinkoff-invest-bot/internal/config"
+	"tinkoff-invest-bot/internal/strategies"
 	api "tinkoff-invest-bot/investapi"
 	"tinkoff-invest-bot/pkg/sdk"
 	"tinkoff-invest-bot/pkg/utils"
@@ -93,9 +94,15 @@ func main() {
 	account := validAccounts[n]
 
 	// Конфигурация стратегии
-	// TODO выбор и задание параметров стратегии (будет использоваться StrategyList)
+	var strategyNames []string
+	for name := range strategies.StrategyList {
+		strategyNames = append(strategyNames, name)
+	}
+	n = utils.RequestChoice("🕹 Выберите стратегию из предложенных", strategyNames, scanner)
+	strategyName := strategyNames[n]
+	// TODO задание параметров стратегии
 	strategy := config.StrategyConfig{
-		Name:   "simple",
+		Name:   strategyName,
 		Config: make(map[string]string, 0),
 	}
 
@@ -122,8 +129,8 @@ TickerLoop:
 						Figi:      share.GetFigi(),
 						Strategy:  strategy,
 						Exchange:  share.GetExchange(),
-						// TODO задание максимального количества лотов на акцию
-						MaxQuantity: 10,
+						// TODO задание интервала
+						Interval: "1_MIN",
 					}
 					filename := ticker + "_" + account.GetId() + ".yaml"
 					err := config.WriteTradingConfig(configsPath, filename, &tradingConfig)
@@ -145,13 +152,13 @@ TickerLoop:
 }
 
 func portfolioReport(portfolio *api.PortfolioResponse) string {
-	totalAmount := convertMoneyValue(portfolio.GetTotalAmountCurrencies()) +
-		convertMoneyValue(portfolio.GetTotalAmountBonds()) +
-		convertMoneyValue(portfolio.GetTotalAmountShares()) +
-		convertMoneyValue(portfolio.GetTotalAmountEtf()) +
-		convertMoneyValue(portfolio.GetTotalAmountFutures())
+	totalAmount := sdk.ConvertMoneyValue(portfolio.GetTotalAmountCurrencies()) +
+		sdk.ConvertMoneyValue(portfolio.GetTotalAmountBonds()) +
+		sdk.ConvertMoneyValue(portfolio.GetTotalAmountShares()) +
+		sdk.ConvertMoneyValue(portfolio.GetTotalAmountEtf()) +
+		sdk.ConvertMoneyValue(portfolio.GetTotalAmountFutures())
 
-	expectedYield := float64(portfolio.ExpectedYield.Units) + float64(portfolio.ExpectedYield.Nano)/1000000000
+	expectedYield := sdk.ConvertQuotation(portfolio.ExpectedYield)
 
 	report := bold("%.2f₽ ", totalAmount)
 	income := fmt.Sprintf("%.2f₽ (%.2f%%)", totalAmount*expectedYield/100, math.Abs(expectedYield))
@@ -164,8 +171,4 @@ func portfolioReport(portfolio *api.PortfolioResponse) string {
 		report += color.WhiteString(income)
 	}
 	return report
-}
-
-func convertMoneyValue(moneyValue *api.MoneyValue) float64 {
-	return float64(moneyValue.Units) + float64(moneyValue.Nano)/1000000000
 }

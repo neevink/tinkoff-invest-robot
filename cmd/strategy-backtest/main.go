@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.com/fatih/color"
 	"log"
 	"os"
 	"time"
+
+	"github.com/fatih/color"
 	"tinkoff-invest-bot/internal/config"
 	api "tinkoff-invest-bot/investapi"
 	"tinkoff-invest-bot/pkg/sdk"
@@ -45,14 +46,24 @@ func main() {
 	for _, tradingConfig := range tradingConfigs {
 		tradingConfigsInfo = append(tradingConfigsInfo, configReport(tradingConfig))
 	}
+	if len(tradingConfigs) == 0 {
+		log.Fatalf("Стратегий в %s не было найдено, попробуйте сгенерировать новые", configsPath)
+	}
 	n := utils.RequestChoice("📈 Выберите стратегию для тестирования", tradingConfigsInfo, scanner)
 	tradingConfig := tradingConfigs[n]
 
 	// TODO задание времени стратегии
-	_, _, err = s.GetCandles(tradingConfig.Figi, time.Now(), time.Now(), api.CandleInterval_CANDLE_INTERVAL_5_MIN)
+	candles, _, err := s.GetCandles(
+		tradingConfig.Figi,
+		time.Now().Add(-time.Hour*24),
+		time.Now(),
+		sdk.ConvertIntervalToCandleInterval(tradingConfig.Interval),
+	)
 	if err != nil {
-		return
+		log.Fatalf("Не удается получить свечи: %v", err)
 	}
+
+	fmt.Println(convertCandles(candles))
 }
 
 // Создает краткую информацию о стратегии
@@ -63,4 +74,20 @@ func configReport(tradingConfig *config.TradingConfig) string {
 		tradingConfig.AccountId,
 		tradingConfig.Strategy.Name,
 		tradingConfig.Strategy.Config)
+}
+
+// Формат свечи: Timestamp, Open, Close, High, Low, volume
+func convertCandles(candles []*api.HistoricCandle) [][]float64 {
+	var convertedCandles [][]float64
+	for _, candle := range candles {
+		convertedCandles = append(convertedCandles, []float64{
+			float64(candle.Time.Seconds),
+			sdk.ConvertQuotation(candle.Open),
+			sdk.ConvertQuotation(candle.Close),
+			sdk.ConvertQuotation(candle.High),
+			sdk.ConvertQuotation(candle.Low),
+			float64(candle.Volume),
+		})
+	}
+	return convertedCandles
 }
