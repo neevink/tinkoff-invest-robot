@@ -7,7 +7,6 @@ import (
 	"log"
 	"math"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/fatih/color"
@@ -15,6 +14,7 @@ import (
 	"tinkoff-invest-bot/internal/config"
 	api "tinkoff-invest-bot/investapi"
 	"tinkoff-invest-bot/pkg/sdk"
+	"tinkoff-invest-bot/pkg/utils"
 )
 
 var (
@@ -52,6 +52,7 @@ func main() {
 		log.Fatalf("Не удается получить информацию об аккаунтах: %v", err)
 	}
 	invalidAccounts := 0
+	var validAccounts []*api.Account
 	var accountsInfo []string
 	for _, account := range accounts {
 		// Фильтрация аккаунтов на валидные и нет
@@ -78,14 +79,18 @@ func main() {
 		}
 		accountInfo += portfolioReport(portfolio)
 		accountsInfo = append(accountsInfo, accountInfo)
+		validAccounts = append(validAccounts, account)
 	}
 
 	// Выбор аккаунта для торговли
 	if invalidAccounts > 0 {
-		fmt.Printf(color.YellowString("Найдено аккаунтов без возможности торговли")+": %d\n", invalidAccounts)
+		fmt.Printf(color.YellowString("Найдено аккаунтов без доступа к торговле")+": %d\n", invalidAccounts)
 	}
-	n := requestChoice("👤 Выберите аккаунт для торговли", accountsInfo)
-	account := accounts[n]
+	if invalidAccounts >= len(accounts) {
+		log.Fatalln("По данному токену не найдено аккаунтов с доступом к торговле")
+	}
+	n := utils.RequestChoice("👤 Выберите аккаунт для торговли", accountsInfo, scanner)
+	account := validAccounts[n]
 
 	// Конфигурация стратегии
 	// TODO выбор и задание параметров стратегии (будет использоваться StrategyList)
@@ -99,7 +104,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Не удается получить информацию об акциях: %v", err)
 	}
-	input := requestParameter("🛍 Введите тикеры акций для торговли", true)
+	input := utils.RequestParameter("🛍 Введите тикеры акций для торговли (через пробел)", true, scanner)
 	tickers := strings.Split(input, " ")
 	for i := 0; i < len(tickers); i++ {
 		tickers[i] = strings.ToUpper(tickers[i])
@@ -129,7 +134,7 @@ TickerLoop:
 				}
 			}
 			fmt.Println(color.YellowString("Инструмент с тикером \"" + ticker + "\" не найден!"))
-			ticker = strings.ToUpper(requestParameter("🖍 Уточните или пропустите тикер", false))
+			ticker = strings.ToUpper(utils.RequestParameter("🖍 Уточните или пропустите тикер", false, scanner))
 			if ticker == "" {
 				continue TickerLoop
 			}
@@ -137,50 +142,6 @@ TickerLoop:
 	}
 
 	fmt.Println(color.GreenString("👍 Удачной торговли!"))
-}
-
-// Запросить у пользователя параметр в виде строки
-func requestParameter(msg string, required bool) string {
-	for {
-		fmt.Printf(color.BlueString(msg) + ": ")
-		if !scanner.Scan() {
-			if scanner.Err() == nil {
-				log.Fatalf("Ввод из консоли принудительно завершен")
-			} else {
-				fmt.Println(color.YellowString("Не удалось прочитать из консоли"))
-				continue
-			}
-		}
-		parameter := scanner.Text()
-		if required && parameter == "" {
-			fmt.Println(color.YellowString("Этот параметр является обязательным"))
-			continue
-		}
-		return parameter
-	}
-}
-
-// Запросить у пользователя выбор строки из предложенных строк
-func requestChoice(msg string, a []string) int {
-	if len(a) <= 0 {
-		log.Fatalf("Ошибка, передано 0 возможных значений")
-	}
-	for i, aa := range a {
-		fmt.Printf("%d. %s\n", i, aa)
-	}
-	for {
-		input := requestParameter(msg, true)
-		n, err := strconv.Atoi(input)
-		if err != nil {
-			fmt.Println(color.YellowString("Ошибка конвертации в целое число"))
-			continue
-		}
-		if n < 0 || n >= len(a) {
-			fmt.Println(color.YellowString("Введите число в промежутке [%d, %d]", 0, len(a)-1))
-			continue
-		}
-		return n
-	}
 }
 
 func portfolioReport(portfolio *api.PortfolioResponse) string {
