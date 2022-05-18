@@ -5,11 +5,11 @@ import (
 	"log"
 	"math/rand"
 	"time"
-	
+
 	"tinkoff-invest-bot/investapi"
 )
 
-func ConvertIntervalToCandleInterval(s string) investapi.CandleInterval {
+func IntervalToCandleInterval(s string) investapi.CandleInterval {
 	switch s {
 	case "1_MIN":
 		return investapi.CandleInterval_CANDLE_INTERVAL_1_MIN
@@ -27,7 +27,7 @@ func ConvertIntervalToCandleInterval(s string) investapi.CandleInterval {
 	}
 }
 
-func ConvertIntervalToDuration(s string) time.Duration {
+func IntervalToDuration(s string) time.Duration {
 	switch s {
 	case "1_MIN":
 		return time.Minute
@@ -43,14 +43,6 @@ func ConvertIntervalToDuration(s string) time.Duration {
 		log.Fatalf("Значение \"%s\" для интервала свечи не определено, исправьте конфигурации", s)
 		return 0
 	}
-}
-
-func ConvertMoneyValue(moneyValue *investapi.MoneyValue) float64 {
-	return float64(moneyValue.Units) + float64(moneyValue.Nano)/1000000000
-}
-
-func ConvertQuotation(quotation *investapi.Quotation) float64 {
-	return float64(quotation.Units) + float64(quotation.Nano)/1000000000
 }
 
 func PrintQuotation(q *investapi.Quotation) {

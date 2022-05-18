@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/sdcoffey/big"
+	"github.com/sdcoffey/techan"
 	"tinkoff-invest-bot/internal/config"
 	api "tinkoff-invest-bot/investapi"
 	"tinkoff-invest-bot/pkg/sdk"
@@ -52,18 +54,79 @@ func main() {
 	n := utils.RequestChoice("📈 Выберите стратегию для тестирования", tradingConfigsInfo, scanner)
 	tradingConfig := tradingConfigs[n]
 
-	// TODO задание времени стратегии
 	candles, _, err := s.GetCandles(
 		tradingConfig.Figi,
-		time.Now().Add(-time.Hour*24),
+		time.Now().Add(-time.Hour*24), // TODO задание времени стратегии
 		time.Now(),
-		sdk.ConvertIntervalToCandleInterval(tradingConfig.Interval),
+		sdk.IntervalToCandleInterval(tradingConfig.Strategy.Interval),
 	)
 	if err != nil {
 		log.Fatalf("Не удается получить свечи: %v", err)
 	}
 
-	fmt.Println(convertCandles(candles))
+	//ok
+	//ok
+	//ok
+	//ok
+	//ok
+	// стратегия называется (cross over EMA — buy, cross below — sell)
+	const window = 100                                                  // значение будет подгружено из конфига (окно индикатора EMA)
+	duration := sdk.IntervalToDuration(tradingConfig.Strategy.Interval) // интервал свечи, в формате Duration
+	series := techan.NewTimeSeries()                                    // история всех свечей (будет использоваться также для графиков)
+	closePrices := techan.NewClosePriceIndicator(series)                // отсеивает High, Low, Open, на выходе только Close
+	movingAverage := techan.NewEMAIndicator(closePrices, window)        // Создает экспоненциальное средне с окном в n свечей
+
+	// так выглядит создание стратегии
+	record := techan.NewTradingRecord() // запись покупок, продаж (будет использоваться также для графиков)
+	entryRule := techan.And(            // правило вхождения
+		techan.NewCrossUpIndicatorRule(movingAverage, closePrices), // когда свеча закрытия пересечет EMA (станет выше EMA)
+		techan.PositionNewRule{})                                   // и сделок не открыто — мы покупаем
+	exitRule := techan.And(
+		techan.NewCrossDownIndicatorRule(closePrices, movingAverage), // тут соответственно наоборот, стратегия ужасно работает на рынке без тренда
+		techan.PositionOpenRule{})
+	strategy := techan.RuleStrategy{
+		UnstablePeriod: window, // нестабильный период, сюда нужно класть размер окна, так как EMA не будет рассчитываться
+		EntryRule:      entryRule,
+		ExitRule:       exitRule,
+	}
+
+	for i, candle := range candles { // будем попорядку добавлять свечи, имитируя консумер (такая штука может находиться в консумере)
+		series.AddCandle(candleFromHistoricCandle(candle, duration)) // мол добавляем пришедшую свечу (неважно откуда)
+		if strategy.ShouldEnter(series.LastIndex(), record) {
+			// тут соответственно возвращаем сигнал о покупке, бэктестинг это может сохранить, а sdk будет покупать по этому сигналу
+
+			record.Operate(techan.Order{
+				Side:          techan.BUY,
+				Security:      "uid",
+				Price:         big.Decimal{},
+				Amount:        big.Decimal{},
+				ExecutionTime: series.LastCandle().Period.Start,
+			})
+			fmt.Println(i, candle.Time.AsTime(), ":", sdk.QuotationToFloat(candle.Close), movingAverage.Calculate(series.LastIndex())) // выведем по приколу сейчасшнюю цену и результат индикатора
+			fmt.Println("КУПИЛИ")
+		} else {
+			if strategy.ShouldExit(series.LastIndex(), record) {
+				// тут соответственно возвращаем сигнал о продаже, бэктестинг это может сохранить, а sdk будет продавать по этому сигналу
+
+				record.Operate(techan.Order{
+					Side:          techan.SELL,
+					Security:      "uid",
+					Price:         big.Decimal{},
+					Amount:        big.Decimal{},
+					ExecutionTime: series.LastCandle().Period.Start, //допустим
+				})
+				fmt.Println(i, candle.Time.AsTime(), ":", sdk.QuotationToFloat(candle.Close), movingAverage.Calculate(series.LastIndex())) // выведем по приколу сейчасшнюю цену и результат индикатора
+				fmt.Println("продали")
+			} else {
+				//fmt.Println("Действий не требуется")
+			}
+		}
+	}
+
+	fmt.Println("вот трейды:")
+	for i, trade := range record.Trades {
+		fmt.Println(i, trade.EntranceOrder().ExecutionTime, trade.ExitOrder().ExecutionTime)
+	}
 }
 
 // Создает краткую информацию о стратегии
@@ -76,18 +139,23 @@ func configReport(tradingConfig *config.TradingConfig) string {
 		tradingConfig.Strategy.Config)
 }
 
-// Формат свечи: Timestamp, Open, Close, High, Low, volume
-func convertCandles(candles []*api.HistoricCandle) [][]float64 {
-	var convertedCandles [][]float64
-	for _, candle := range candles {
-		convertedCandles = append(convertedCandles, []float64{
-			float64(candle.Time.Seconds),
-			sdk.ConvertQuotation(candle.Open),
-			sdk.ConvertQuotation(candle.Close),
-			sdk.ConvertQuotation(candle.High),
-			sdk.ConvertQuotation(candle.Low),
-			float64(candle.Volume),
-		})
+func timeSeriesFromHistoricCandles(candles []*api.HistoricCandle, period time.Duration) *techan.TimeSeries {
+	series := techan.NewTimeSeries()
+
+	for _, c := range candles {
+		series.AddCandle(candleFromHistoricCandle(c, period))
 	}
-	return convertedCandles
+	return series
+}
+
+func candleFromHistoricCandle(c *api.HistoricCandle, period time.Duration) *techan.Candle {
+	timePeriod := techan.NewTimePeriod(c.Time.AsTime(), period)
+	candle := techan.NewCandle(timePeriod)
+
+	candle.OpenPrice = big.NewDecimal(sdk.QuotationToFloat(c.Open))
+	candle.ClosePrice = big.NewDecimal(sdk.QuotationToFloat(c.Close))
+	candle.MaxPrice = big.NewDecimal(sdk.QuotationToFloat(c.High))
+	candle.MinPrice = big.NewDecimal(sdk.QuotationToFloat(c.Low))
+	candle.Volume = big.NewFromInt(int(c.Volume))
+	return candle
 }

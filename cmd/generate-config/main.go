@@ -100,10 +100,11 @@ func main() {
 	}
 	n = utils.RequestChoice("🕹 Выберите стратегию из предложенных", strategyNames, scanner)
 	strategyName := strategyNames[n]
-	// TODO задание параметров стратегии
+	// TODO задание параметров стратегии, интервала
 	strategy := config.StrategyConfig{
-		Name:   strategyName,
-		Config: make(map[string]string, 0),
+		Name:     strategyName,
+		Interval: "1_MIN",
+		Config:   make(map[string]string, 0),
 	}
 
 	// Выбор акций для торговли
@@ -129,8 +130,6 @@ TickerLoop:
 						Figi:      share.GetFigi(),
 						Strategy:  strategy,
 						Exchange:  share.GetExchange(),
-						// TODO задание интервала
-						Interval: "1_MIN",
 					}
 					filename := ticker + "_" + account.GetId() + ".yaml"
 					err := config.WriteTradingConfig(configsPath, filename, &tradingConfig)
@@ -152,13 +151,13 @@ TickerLoop:
 }
 
 func portfolioReport(portfolio *api.PortfolioResponse) string {
-	totalAmount := sdk.ConvertMoneyValue(portfolio.GetTotalAmountCurrencies()) +
-		sdk.ConvertMoneyValue(portfolio.GetTotalAmountBonds()) +
-		sdk.ConvertMoneyValue(portfolio.GetTotalAmountShares()) +
-		sdk.ConvertMoneyValue(portfolio.GetTotalAmountEtf()) +
-		sdk.ConvertMoneyValue(portfolio.GetTotalAmountFutures())
+	totalAmount := sdk.MoneyValueToFloat(portfolio.GetTotalAmountCurrencies()) +
+		sdk.MoneyValueToFloat(portfolio.GetTotalAmountBonds()) +
+		sdk.MoneyValueToFloat(portfolio.GetTotalAmountShares()) +
+		sdk.MoneyValueToFloat(portfolio.GetTotalAmountEtf()) +
+		sdk.MoneyValueToFloat(portfolio.GetTotalAmountFutures())
 
-	expectedYield := sdk.ConvertQuotation(portfolio.ExpectedYield)
+	expectedYield := sdk.QuotationToFloat(portfolio.ExpectedYield)
 
 	report := bold("%.2f₽ ", totalAmount)
 	income := fmt.Sprintf("%.2f₽ (%.2f%%)", totalAmount*expectedYield/100, math.Abs(expectedYield))
