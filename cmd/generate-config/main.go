@@ -12,8 +12,8 @@ import (
 	"github.com/fatih/color"
 
 	"tinkoff-invest-bot/internal/config"
-	"tinkoff-invest-bot/internal/strategies"
-	api "tinkoff-invest-bot/investapi"
+	"tinkoff-invest-bot/internal/rule-strategy"
+	"tinkoff-invest-bot/investapi"
 	"tinkoff-invest-bot/pkg/sdk"
 	"tinkoff-invest-bot/pkg/utils"
 )
@@ -53,24 +53,24 @@ func main() {
 		log.Fatalf("Не удается получить информацию об аккаунтах: %v", err)
 	}
 	invalidAccounts := 0
-	var validAccounts []*api.Account
+	var validAccounts []*investapi.Account
 	var accountsInfo []string
 	for _, account := range accounts {
 		// Фильтрация аккаунтов на валидные и нет
-		if account.GetType() == api.AccountType_ACCOUNT_TYPE_UNSPECIFIED ||
-			account.GetStatus() != api.AccountStatus_ACCOUNT_STATUS_OPEN ||
-			account.GetAccessLevel() != api.AccessLevel_ACCOUNT_ACCESS_LEVEL_FULL_ACCESS {
+		if account.GetType() == investapi.AccountType_ACCOUNT_TYPE_UNSPECIFIED ||
+			account.GetStatus() != investapi.AccountStatus_ACCOUNT_STATUS_OPEN ||
+			account.GetAccessLevel() != investapi.AccessLevel_ACCOUNT_ACCESS_LEVEL_FULL_ACCESS {
 			invalidAccounts++
 			continue
 		}
 		// Получение краткой информации об аккаунте
 		var accountInfo string
 		switch account.GetType() {
-		case api.AccountType_ACCOUNT_TYPE_INVEST_BOX:
+		case investapi.AccountType_ACCOUNT_TYPE_INVEST_BOX:
 			accountInfo += "🐷 "
-		case api.AccountType_ACCOUNT_TYPE_TINKOFF_IIS:
+		case investapi.AccountType_ACCOUNT_TYPE_TINKOFF_IIS:
 			accountInfo += "🏦 "
-		case api.AccountType_ACCOUNT_TYPE_TINKOFF:
+		case investapi.AccountType_ACCOUNT_TYPE_TINKOFF:
 			accountInfo += "💰 "
 		}
 		accountInfo += account.GetName() + " "
@@ -94,17 +94,18 @@ func main() {
 	account := validAccounts[n]
 
 	// Конфигурация стратегии
-	var strategyNames []string
-	for name := range strategies.StrategyList {
-		strategyNames = append(strategyNames, name)
+	var ruleStrategyNames []string
+	for name := range rule_strategy.List {
+		ruleStrategyNames = append(ruleStrategyNames, name)
 	}
-	n = utils.RequestChoice("🕹 Выберите стратегию из предложенных", strategyNames, scanner)
-	strategyName := strategyNames[n]
-	// TODO задание параметров стратегии, интервала
-	strategy := config.StrategyConfig{
-		Name:     strategyName,
+	n = utils.RequestChoice("🕹 Выберите стратегию из предложенных", ruleStrategyNames, scanner)
+	ruleStrategy := ruleStrategyNames[n]
+	// TODO задание параметров стратегии ("window"), интервала, количества лотов
+	strategyConfig := config.StrategyConfig{
+		Name:     ruleStrategy,
 		Interval: "1_MIN",
-		Config:   make(map[string]string, 0),
+		Other:    make(map[string]int, 0),
+		Quantity: 1,
 	}
 
 	// Выбор акций для торговли
@@ -128,7 +129,7 @@ TickerLoop:
 						AccountId: account.GetId(),
 						Ticker:    ticker,
 						Figi:      share.GetFigi(),
-						Strategy:  strategy,
+						Strategy:  strategyConfig,
 						Exchange:  share.GetExchange(),
 					}
 					filename := ticker + "_" + account.GetId() + ".yaml"
@@ -150,7 +151,7 @@ TickerLoop:
 	fmt.Println(color.GreenString("👍 Удачной торговли!"))
 }
 
-func portfolioReport(portfolio *api.PortfolioResponse) string {
+func portfolioReport(portfolio *investapi.PortfolioResponse) string {
 	totalAmount := sdk.MoneyValueToFloat(portfolio.GetTotalAmountCurrencies()) +
 		sdk.MoneyValueToFloat(portfolio.GetTotalAmountBonds()) +
 		sdk.MoneyValueToFloat(portfolio.GetTotalAmountShares()) +

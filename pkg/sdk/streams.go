@@ -2,8 +2,19 @@ package sdk
 
 import (
 	"golang.org/x/xerrors"
+
 	api "tinkoff-invest-bot/investapi"
 )
+
+func (s *SDK) SubscribeCandles(figi string, interval api.SubscriptionInterval, consumer *TickerPriceConsumerInterface) error {
+	// TODO блять кирилл нихуя не понятно, сделай так чтобы я на свечи мог подписаться
+	panic("блять кирилл нихуя не понятно, сделай так чтобы я на свечи мог подписаться")
+}
+
+func (s *SDK) UnsubscribeCandles(figi string, consumer *TickerPriceConsumerInterface) error {
+	// TODO блять кирилл нихуя не понятно, сделай так чтобы я на свечи мог подписаться
+	panic("блять кирилл нихуя не понятно, сделай так чтобы я на свечи мог подписаться")
+}
 
 func (s *SDK) SubscribeMarketData(figi string, consumer *TickerPriceConsumerInterface) error {
 	consumers, contains := s.marketDataConsumers[figi]

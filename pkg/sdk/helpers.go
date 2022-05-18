@@ -1,7 +1,6 @@
 package sdk
 
 import (
-	"fmt"
 	"log"
 	"math/rand"
 	"time"
@@ -9,18 +8,24 @@ import (
 	"tinkoff-invest-bot/investapi"
 )
 
+func IntervalToSubscriptionInterval(s string) investapi.SubscriptionInterval {
+	switch s {
+	case "1_MIN":
+		return investapi.SubscriptionInterval_SUBSCRIPTION_INTERVAL_ONE_MINUTE
+	case "5_MIN":
+		return investapi.SubscriptionInterval_SUBSCRIPTION_INTERVAL_FIVE_MINUTES
+	default:
+		log.Fatalf("Значение \"%s\" для интервала свечи не определено, исправьте конфигурации", s)
+		return investapi.SubscriptionInterval_SUBSCRIPTION_INTERVAL_UNSPECIFIED
+	}
+}
+
 func IntervalToCandleInterval(s string) investapi.CandleInterval {
 	switch s {
 	case "1_MIN":
 		return investapi.CandleInterval_CANDLE_INTERVAL_1_MIN
 	case "5_MIN":
 		return investapi.CandleInterval_CANDLE_INTERVAL_5_MIN
-	case "15_MIN":
-		return investapi.CandleInterval_CANDLE_INTERVAL_15_MIN
-	case "HOUR":
-		return investapi.CandleInterval_CANDLE_INTERVAL_HOUR
-	case "DAY":
-		return investapi.CandleInterval_CANDLE_INTERVAL_DAY
 	default:
 		log.Fatalf("Значение \"%s\" для интервала свечи не определено, исправьте конфигурации", s)
 		return investapi.CandleInterval_CANDLE_INTERVAL_UNSPECIFIED
@@ -33,24 +38,10 @@ func IntervalToDuration(s string) time.Duration {
 		return time.Minute
 	case "5_MIN":
 		return time.Minute * 5
-	case "15_MIN":
-		return time.Minute * 15
-	case "HOUR":
-		return time.Hour
-	case "DAY":
-		return time.Hour * 24
 	default:
 		log.Fatalf("Значение \"%s\" для интервала свечи не определено, исправьте конфигурации", s)
 		return 0
 	}
-}
-
-func PrintQuotation(q *investapi.Quotation) {
-	fmt.Printf("%f", QuotationToFloat(q))
-}
-
-func PrintMoneyValue(q *investapi.MoneyValue) {
-	fmt.Printf("%f%s", MoneyValueToFloat(q), q.Currency)
 }
 
 func GenerateOrderId() string {

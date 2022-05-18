@@ -13,9 +13,10 @@ import (
 )
 
 type StrategyConfig struct {
-	Name     string            `yaml:"name"`
-	Interval string            `yaml:"interval"`
-	Config   map[string]string `yaml:"configuration"`
+	Name     string         `yaml:"name"`
+	Interval string         `yaml:"interval"`
+	Quantity int64          `yaml:"quantity"`
+	Other    map[string]int `yaml:"configuration"`
 }
 
 type TradingConfig struct {

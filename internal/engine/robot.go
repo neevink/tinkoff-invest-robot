@@ -8,54 +8,54 @@ import (
 	"golang.org/x/xerrors"
 
 	"tinkoff-invest-bot/internal/config"
-	"tinkoff-invest-bot/internal/strategies"
+	"tinkoff-invest-bot/internal/strategy"
 	"tinkoff-invest-bot/pkg/sdk"
 )
 
 type investRobot struct {
-	config      *config.RobotConfig
-	tradingConf *config.TradingConfig
-	strategy    *strategies.TradingStrategy
-	logger      *zap.Logger
+	robotConfig     *config.RobotConfig
+	tradingConfig   *config.TradingConfig
+	tradingStrategy *strategy.Wrapper
+	logger          *zap.Logger
 }
 
-func New(conf *config.RobotConfig, tradingConf *config.TradingConfig, logger *zap.Logger, ctx context.Context) (*investRobot, error) {
+func New(conf *config.RobotConfig, tradingConfig *config.TradingConfig, logger *zap.Logger, ctx context.Context) (*investRobot, error) {
 	s, err := sdk.New(conf.TinkoffApiEndpoint, conf.TinkoffAccessToken, conf.AppName, ctx)
 	if err != nil {
 		return nil, xerrors.Errorf("can't init sdk: %v", err)
 	}
 	s.Run()
 
-	strategy, err := strategies.FromConfig(tradingConf, s, logger)
+	tradingStrategy, err := strategy.FromConfig(tradingConfig, s, logger)
 	if err != nil {
 		return nil, err
 	}
 
 	return &investRobot{
-		config:      conf,
-		tradingConf: tradingConf,
-		strategy:    strategy,
-		logger:      logger,
+		robotConfig:     conf,
+		tradingConfig:   tradingConfig,
+		tradingStrategy: tradingStrategy,
+		logger:          logger,
 	}, nil
 }
 
 func (r *investRobot) Run() error {
-	err := (*r.strategy).Start()
+	err := (*r.tradingStrategy).Start()
 	if err != nil {
-		return xerrors.Errorf("can't start robot strategy, %v", err)
+		return xerrors.Errorf("can't start robot tradingStrategy, %v", err)
 	}
 
 	r.logger.Info(
 		"Invest robot successfully run",
-		zap.String("figi", r.tradingConf.Figi),
-		zap.String("strategy", (*r.strategy).Name()),
+		zap.String("figi", r.tradingConfig.Figi),
+		zap.String("tradingStrategy", r.tradingConfig.Strategy.Name),
 	)
 
 	time.Sleep(6000 * time.Second)
 
-	err = (*r.strategy).Stop()
+	err = (*r.tradingStrategy).Stop()
 	if err != nil {
-		return xerrors.Errorf("can't stop robot strategy, %v", err)
+		return xerrors.Errorf("can't stop robot tradingStrategy, %v", err)
 	}
 	return nil
 }
