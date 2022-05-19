@@ -33,7 +33,7 @@ func (W Wrapper) Step(candle *techan.Candle) Operation {
 }
 
 func (W Wrapper) Consume(data *investapi.MarketDataResponse) {
-	op := W.Step(sdk.CandleToCandle(data.GetCandle(), sdk.IntervalToDuration(W.tradingConfig.Strategy.Interval)))
+	op := W.Step(CandleToCandle(data.GetCandle(), sdk.IntervalToDuration(W.tradingConfig.StrategyConfig.Interval)))
 	// TODO тут можно сократить текст на много
 	switch op {
 	case Buy:
@@ -41,7 +41,7 @@ func (W Wrapper) Consume(data *investapi.MarketDataResponse) {
 
 		if resp, trackingId, err := W.sdk.SandboxMarketBuy(
 			W.tradingConfig.Figi,
-			W.tradingConfig.Strategy.Quantity,
+			W.tradingConfig.StrategyConfig.Quantity,
 			W.tradingConfig.AccountId,
 			orderId,
 		); err != nil {
@@ -49,7 +49,7 @@ func (W Wrapper) Consume(data *investapi.MarketDataResponse) {
 				"Can't Buy share",
 				zap.String("figi", W.tradingConfig.Figi),
 				zap.Float64("price", sdk.MoneyValueToFloat(resp.GetInitialOrderPrice())),
-				zap.String("ruleStrategy", W.tradingConfig.Strategy.Name),
+				zap.String("ruleStrategy", W.tradingConfig.StrategyConfig.Name),
 				zap.String("orderId", orderId),
 				zap.String("trackingId", trackingId),
 				zap.Error(err),
@@ -67,7 +67,7 @@ func (W Wrapper) Consume(data *investapi.MarketDataResponse) {
 				"Buy new share",
 				zap.String("figi", W.tradingConfig.Figi),
 				zap.Float64("price", sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
-				zap.String("ruleStrategy", W.tradingConfig.Strategy.Name),
+				zap.String("ruleStrategy", W.tradingConfig.StrategyConfig.Name),
 				zap.String("orderId", orderId),
 				zap.String("trackingId", trackingId),
 			)
@@ -77,7 +77,7 @@ func (W Wrapper) Consume(data *investapi.MarketDataResponse) {
 
 		if resp, trackingId, err := W.sdk.SandboxMarketSell(
 			W.tradingConfig.Figi,
-			W.tradingConfig.Strategy.Quantity,
+			W.tradingConfig.StrategyConfig.Quantity,
 			W.tradingConfig.AccountId,
 			orderId,
 		); err != nil {
@@ -85,7 +85,7 @@ func (W Wrapper) Consume(data *investapi.MarketDataResponse) {
 				"Can't Sell new share",
 				zap.String("figi", W.tradingConfig.Figi),
 				zap.Float64("price", sdk.MoneyValueToFloat(resp.GetInitialOrderPrice())),
-				zap.String("ruleStrategy", W.tradingConfig.Strategy.Name),
+				zap.String("ruleStrategy", W.tradingConfig.StrategyConfig.Name),
 				zap.String("orderId", orderId),
 				zap.String("trackingId", trackingId),
 				zap.Error(err),
@@ -103,7 +103,7 @@ func (W Wrapper) Consume(data *investapi.MarketDataResponse) {
 				"Sell share",
 				zap.String("figi", W.tradingConfig.Figi),
 				zap.Float64("price", sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
-				zap.String("ruleStrategy", W.tradingConfig.Strategy.Name),
+				zap.String("ruleStrategy", W.tradingConfig.StrategyConfig.Name),
 				zap.String("orderId", orderId),
 				zap.String("trackingId", trackingId),
 			)
@@ -113,7 +113,7 @@ func (W Wrapper) Consume(data *investapi.MarketDataResponse) {
 			"Share ждет",
 			zap.String("figi", W.tradingConfig.Figi),
 			zap.Float64("curPrice", W.TimeSeries.LastCandle().ClosePrice.Float()),
-			zap.String("ruleStrategy", W.tradingConfig.Strategy.Name),
+			zap.String("ruleStrategy", W.tradingConfig.StrategyConfig.Name),
 		)
 	default:
 		panic("нет такого")
@@ -122,7 +122,7 @@ func (W Wrapper) Consume(data *investapi.MarketDataResponse) {
 
 func (W Wrapper) Start() error {
 	var cons sdk.TickerPriceConsumerInterface = W
-	err := W.sdk.SubscribeCandles(W.tradingConfig.Figi, sdk.IntervalToSubscriptionInterval(W.tradingConfig.Strategy.Interval), &cons)
+	err := W.sdk.SubscribeCandles(W.tradingConfig.Figi, sdk.IntervalToSubscriptionInterval(W.tradingConfig.StrategyConfig.Interval), &cons)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func (W Wrapper) Start() error {
 	W.logger.Info(
 		"Algorithm started",
 		zap.String("figi", W.tradingConfig.Figi),
-		zap.String("ruleStrategy", W.tradingConfig.Strategy.Name),
+		zap.String("ruleStrategy", W.tradingConfig.StrategyConfig.Name),
 	)
 
 	return nil
@@ -144,7 +144,7 @@ func (W Wrapper) Stop() error {
 	W.logger.Info(
 		"Invest robot stopped",
 		zap.String("figi", W.tradingConfig.Figi),
-		zap.String("ruleStrategy", W.tradingConfig.Strategy.Name),
+		zap.String("ruleStrategy", W.tradingConfig.StrategyConfig.Name),
 	)
 	return nil
 }

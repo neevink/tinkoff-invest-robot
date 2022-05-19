@@ -158,12 +158,12 @@ func main() {
 			for _, share := range responseShares {
 				if share.GetTicker() == strings.ToUpper(inputTicker) {
 					tradingConfig := config.TradingConfig{
-						AccountId: account.GetId(),
-						IsSandbox: isSandbox,
-						Ticker:    share.GetTicker(),
-						Figi:      share.GetFigi(),
-						Exchange:  share.GetExchange(),
-						Strategy:  strategyConfig,
+						AccountId:      account.GetId(),
+						IsSandbox:      isSandbox,
+						Ticker:         share.GetTicker(),
+						Figi:           share.GetFigi(),
+						Exchange:       share.GetExchange(),
+						StrategyConfig: strategyConfig,
 					}
 					filename := share.GetTicker() + "_" + account.GetId() + ".yaml"
 					if err = config.WriteTradingConfig(configsPath, filename, &tradingConfig); err != nil {

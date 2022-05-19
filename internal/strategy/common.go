@@ -19,9 +19,9 @@ const (
 )
 
 func FromConfig(tradingConfig *config.TradingConfig, s *sdk.SDK, logger *zap.Logger) (*Wrapper, error) {
-	f := rule_strategy.List[tradingConfig.Strategy.Name]
+	f := rule_strategy.List[tradingConfig.StrategyConfig.Name]
 	if f == nil {
-		return nil, xerrors.Errorf("no ruleStrategy with name %s", tradingConfig.Strategy.Name)
+		return nil, xerrors.Errorf("no ruleStrategy with name %s", tradingConfig.StrategyConfig.Name)
 	}
 
 	tradingRecord := techan.NewTradingRecord() // создание структуры стратегии и истории трейдинга

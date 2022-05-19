@@ -54,7 +54,7 @@ func main() {
 	var tradingConfigsInfo []string
 	for _, tradingConfig := range tradingConfigs {
 		tradingConfigsInfo = append(tradingConfigsInfo,
-			fmt.Sprintf("%s: %s_%s", tradingConfig.Strategy.Name, tradingConfig.Ticker, tradingConfig.AccountId),
+			fmt.Sprintf("%s: %s_%s", tradingConfig.StrategyConfig.Name, tradingConfig.Ticker, tradingConfig.AccountId),
 		)
 	}
 	if len(tradingConfigs) == 0 {
@@ -70,8 +70,8 @@ func main() {
 	var candles []*investapi.HistoricCandle
 	if vals[n] == 0 {
 		for {
-			from = utils.RequestDate("🎬 Введите дату начала в формате DDMMYY", scanner)
-			to = utils.RequestDate("🎬 Введите дату конца в формате DDMMYY", scanner)
+			from = utils.RequestDate("🎬 Введите дату начала в формате DD-MM-YY", scanner)
+			to = utils.RequestDate("🎬 Введите дату конца в формате DD-MM-YY", scanner)
 			if from.After(to) {
 				color.Yellow("Дата начала позже даты конца")
 			} else if to.Sub(from) > time.Hour*24*31 {
@@ -89,7 +89,7 @@ func main() {
 			tradingConfig.Figi,
 			from,
 			from.AddDate(0, 0, 1),
-			sdk.IntervalToCandleInterval(tradingConfig.Strategy.Interval),
+			sdk.IntervalToCandleInterval(tradingConfig.StrategyConfig.Interval),
 		)
 		if err != nil {
 			log.Fatalf("Не удается получить свечи: %v", err)
@@ -104,7 +104,7 @@ func main() {
 	}
 
 	for _, candle := range candles {
-		op := strategyWrapper.Step(sdk.HistoricCandleToCandle(candle, sdk.IntervalToDuration(tradingConfig.Strategy.Interval)))
+		op := strategyWrapper.Step(strategy.HistoricCandleToCandle(candle, sdk.IntervalToDuration(tradingConfig.StrategyConfig.Interval)))
 		switch op {
 		case strategy.Buy:
 			fallthrough
@@ -112,7 +112,7 @@ func main() {
 			strategyWrapper.TradingRecord.Operate(techan.Order{
 				Side:          techan.OrderSide(op),
 				Price:         big.NewDecimal(sdk.QuotationToFloat(candle.Close)),
-				Amount:        big.NewFromInt(int(tradingConfig.Strategy.Quantity)),
+				Amount:        big.NewFromInt(int(tradingConfig.StrategyConfig.Quantity)),
 				ExecutionTime: candle.Time.AsTime(),
 			})
 		case strategy.Hold:

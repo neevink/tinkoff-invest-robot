@@ -9,7 +9,7 @@ import (
 )
 
 func simpleAroon(tradingConfig config.TradingConfig) (techan.RuleStrategy, *techan.TimeSeries) {
-	var w = tradingConfig.Strategy.Other[window]
+	var w = tradingConfig.StrategyConfig.Other[window]
 	if w == 0 {
 		panic(fmt.Sprintf("Значение %s в конфигурации %s_%s не обнаружено", window, tradingConfig.Ticker, tradingConfig.AccountId))
 	}

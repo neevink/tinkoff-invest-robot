@@ -72,7 +72,7 @@ func RequestInt(msg string, scanner *bufio.Scanner) int {
 	}
 }
 
-const layout = "020106"
+const layout = "02-01-06"
 
 // RequestDate Запросить у пользователя дату
 func RequestDate(msg string, scanner *bufio.Scanner) time.Time {

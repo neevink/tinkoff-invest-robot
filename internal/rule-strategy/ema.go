@@ -9,7 +9,7 @@ import (
 )
 
 func simpleEMA(tradingConfig config.TradingConfig) (techan.RuleStrategy, *techan.TimeSeries) {
-	var w = tradingConfig.Strategy.Other[window]
+	var w = tradingConfig.StrategyConfig.Other[window]
 	if w == 0 {
 		panic(fmt.Sprintf("Значение %s в конфигурации %s_%s не обнаружено", window, tradingConfig.Ticker, tradingConfig.AccountId))
 	}
@@ -20,10 +20,10 @@ func simpleEMA(tradingConfig config.TradingConfig) (techan.RuleStrategy, *techan
 
 	entryRule := techan.And( // правило входа
 		techan.NewCrossUpIndicatorRule(movingAverage, closePrices), // когда свеча закрытия пересечет EMA (станет выше EMA)
-		techan.PositionNewRule{}) // и сделок не открыто — мы покупаем
+		techan.PositionNewRule{})                                   // и сделок не открыто — мы покупаем
 	exitRule := techan.And( // правило выхода
 		techan.NewCrossDownIndicatorRule(closePrices, movingAverage), // когда свеча закроется ниже EMA
-		techan.PositionOpenRule{}) // и сделка открыта — продаем
+		techan.PositionOpenRule{})                                    // и сделка открыта — продаем
 	ruleStrategy := techan.RuleStrategy{
 		UnstablePeriod: w,
 		EntryRule:      entryRule,
@@ -33,8 +33,8 @@ func simpleEMA(tradingConfig config.TradingConfig) (techan.RuleStrategy, *techan
 }
 
 func doubleEMA(tradingConfig config.TradingConfig) (techan.RuleStrategy, *techan.TimeSeries) {
-	var sw = tradingConfig.Strategy.Other[shortWindow]
-	var lw = tradingConfig.Strategy.Other[longWindow]
+	var sw = tradingConfig.StrategyConfig.Other[shortWindow]
+	var lw = tradingConfig.StrategyConfig.Other[longWindow]
 	if sw == 0 || lw == 0 {
 		panic(fmt.Sprintf("Значения %s или %s в конфигурации %s_%s не обнаружены", shortWindow, longWindow, tradingConfig.Ticker, tradingConfig.AccountId))
 	}
@@ -59,9 +59,9 @@ func doubleEMA(tradingConfig config.TradingConfig) (techan.RuleStrategy, *techan
 }
 
 func tripleEMA(tradingConfig config.TradingConfig) (techan.RuleStrategy, *techan.TimeSeries) {
-	var sw = tradingConfig.Strategy.Other[shortWindow]
-	var mw = tradingConfig.Strategy.Other[middleWindow]
-	var lw = tradingConfig.Strategy.Other[longWindow]
+	var sw = tradingConfig.StrategyConfig.Other[shortWindow]
+	var mw = tradingConfig.StrategyConfig.Other[middleWindow]
+	var lw = tradingConfig.StrategyConfig.Other[longWindow]
 	if sw == 0 || lw == 0 || mw == 0 {
 		panic(fmt.Sprintf("Значения %s или %s или %s в конфигурации %s_%s не обнаружены", shortWindow, middleWindow, longWindow, tradingConfig.Ticker, tradingConfig.AccountId))
 	}

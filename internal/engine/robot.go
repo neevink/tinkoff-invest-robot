@@ -48,7 +48,7 @@ func (r *investRobot) Run() error {
 	r.logger.Info(
 		"Invest robot successfully run",
 		zap.String("figi", r.tradingConfig.Figi),
-		zap.String("tradingStrategy", r.tradingConfig.Strategy.Name),
+		zap.String("tradingStrategy", r.tradingConfig.StrategyConfig.Name),
 	)
 
 	time.Sleep(6000 * time.Second)

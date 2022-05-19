@@ -19,6 +19,7 @@ all:
 build: compile-proto
 	go build -v ./cmd/run-robot/
 	go build -v ./cmd/generate-config/
+	go build -v ./cmd/strategy-backtest/
 
 setup:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
@@ -32,7 +33,7 @@ clean:
 	rm -f $(TINKOFF_PROTO)/*.go
 	rm -f ./run-robot
 	rm -f ./generate-config
-	rm -f ./configs/generated/*
+	rm -f ./strategy-backtest
 
 compile-proto:
 	make clean
