@@ -29,20 +29,15 @@ func (s *SDK) GetSandboxAccounts() ([]*api.Account, string, error) {
 }
 
 func (s *SDK) SandboxMarketBuy(figi string, quantity int64, accountId string, orderId string) (*api.PostOrderResponse, string, error) {
-	return s.postSandboxMarketOrder(figi, quantity, true, accountId, orderId)
+	return s.postSandboxMarketOrder(figi, quantity, api.OrderDirection_ORDER_DIRECTION_BUY, accountId, orderId)
 }
 
 func (s *SDK) SandboxMarketSell(figi string, quantity int64, accountId string, orderId string) (*api.PostOrderResponse, string, error) {
-	return s.postSandboxMarketOrder(figi, quantity, false, accountId, orderId)
+	return s.postSandboxMarketOrder(figi, quantity, api.OrderDirection_ORDER_DIRECTION_SELL, accountId, orderId)
 }
 
-func (s *SDK) postSandboxMarketOrder(figi string, quantity int64, isBuy bool, accountId string, orderId string) (*api.PostOrderResponse, string, error) {
+func (s *SDK) postSandboxMarketOrder(figi string, quantity int64, direction api.OrderDirection, accountId string, orderId string) (*api.PostOrderResponse, string, error) {
 	var header, trailer metadata.MD
-
-	direction := api.OrderDirection_ORDER_DIRECTION_SELL
-	if isBuy {
-		direction = api.OrderDirection_ORDER_DIRECTION_BUY
-	}
 
 	resp, err := s.sandbox.PostSandboxOrder(
 		s.ctx,
@@ -91,6 +86,7 @@ func (s *SDK) GetSandboxPositions(accountId string) (*api.PositionsResponse, str
 	return resp, trackingId, nil
 }
 
+// GetSandboxPortfolio Получает портфолио аккаунта
 func (s *SDK) GetSandboxPortfolio(accountId string) (*api.PortfolioResponse, string, error) {
 	var header, trailer metadata.MD
 

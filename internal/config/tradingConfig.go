@@ -13,17 +13,19 @@ import (
 )
 
 type StrategyConfig struct {
-	Name   string            `yaml:"name"`
-	Config map[string]string `yaml:"configuration"`
+	Name     string         `yaml:"name"`
+	Interval string         `yaml:"interval"`
+	Quantity int64          `yaml:"quantity"`
+	Other    map[string]int `yaml:"other"`
 }
 
 type TradingConfig struct {
-	AccountId   string         `yaml:"account_id"`
-	Ticker      string         `yaml:"ticker"`
-	MaxQuantity int            `yaml:"max_quantity"`
-	Figi        string         `yaml:"figi"`
-	Exchange    string         `yaml:"exchange"`
-	Strategy    StrategyConfig `yaml:"strategy"`
+	AccountId      string         `yaml:"account_id"`
+	IsSandbox      bool           `yaml:"is_sandbox"`
+	Ticker         string         `yaml:"ticker"`
+	Figi           string         `yaml:"figi"`
+	Exchange       string         `yaml:"exchange"`
+	StrategyConfig StrategyConfig `yaml:"strategy"`
 }
 
 // LoadTradingsConfig Загружает торговую конфигурацию из файла

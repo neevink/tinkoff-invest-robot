@@ -15,9 +15,16 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.1.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/iamjinlei/go-tachart v0.0.0-20210729041122-12052a3368c8 // indirect
+	github.com/iamjinlei/go-tart v0.0.0-20210623083942-ceb57e98706b // indirect
 	github.com/mattn/go-colorable v0.1.9 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/sdcoffey/big v0.7.0 // indirect
+	github.com/sdcoffey/techan v0.12.1 // indirect
+	github.com/stretchr/testify v1.7.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 // indirect

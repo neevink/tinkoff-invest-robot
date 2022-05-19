@@ -1,19 +1,9 @@
 package sdk
 
 import (
-	"fmt"
 	"math/rand"
 	"time"
-	"tinkoff-invest-bot/investapi"
 )
-
-func PrintQuotation(q *investapi.Quotation) {
-	fmt.Printf("%f", QuotationToFloat(q))
-}
-
-func PrintMoneyValue(q *investapi.MoneyValue) {
-	fmt.Printf("%f%s", MoneyValueToFloat(q), q.Currency)
-}
 
 func GenerateOrderId() string {
 	const length = 36

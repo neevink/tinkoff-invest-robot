@@ -7,14 +7,15 @@ import (
 	"log"
 	"math"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/fatih/color"
 
 	"tinkoff-invest-bot/internal/config"
-	api "tinkoff-invest-bot/investapi"
+	"tinkoff-invest-bot/internal/rule-strategy"
+	"tinkoff-invest-bot/investapi"
 	"tinkoff-invest-bot/pkg/sdk"
+	"tinkoff-invest-bot/pkg/utils"
 )
 
 var (
@@ -25,6 +26,7 @@ var (
 const (
 	configsPath     = "./configs/generated/"
 	robotConfigPath = "./configs/robot.yaml"
+	defaultQuantity = 1
 )
 
 func main() {
@@ -47,51 +49,91 @@ func main() {
 	}
 
 	// Формирование информации об аккаунтах
-	accounts, _, err := s.GetAccounts()
+	// TODO может это привести к общему виду? (isSandbox)
+	isSandbox := utils.RequestBool("⏳ Сконфигурировать робота для работы в Sandbox?", scanner)
+	var accounts []*investapi.Account
+	if isSandbox {
+		accounts, _, err = s.GetSandboxAccounts()
+	} else {
+		accounts, _, err = s.GetAccounts()
+	}
 	if err != nil {
 		log.Fatalf("Не удается получить информацию об аккаунтах: %v", err)
 	}
 	invalidAccounts := 0
+	var validAccounts []*investapi.Account
 	var accountsInfo []string
 	for _, account := range accounts {
 		// Фильтрация аккаунтов на валидные и нет
-		if account.GetType() == api.AccountType_ACCOUNT_TYPE_UNSPECIFIED ||
-			account.GetStatus() != api.AccountStatus_ACCOUNT_STATUS_OPEN ||
-			account.GetAccessLevel() != api.AccessLevel_ACCOUNT_ACCESS_LEVEL_FULL_ACCESS {
+		if account.GetType() == investapi.AccountType_ACCOUNT_TYPE_UNSPECIFIED ||
+			account.GetStatus() != investapi.AccountStatus_ACCOUNT_STATUS_OPEN ||
+			account.GetAccessLevel() != investapi.AccessLevel_ACCOUNT_ACCESS_LEVEL_FULL_ACCESS {
 			invalidAccounts++
 			continue
 		}
 		// Получение краткой информации об аккаунте
 		var accountInfo string
 		switch account.GetType() {
-		case api.AccountType_ACCOUNT_TYPE_INVEST_BOX:
+		// TODO можно ли торговать на инвест копилке? (бред)
+		case investapi.AccountType_ACCOUNT_TYPE_INVEST_BOX:
 			accountInfo += "🐷 "
-		case api.AccountType_ACCOUNT_TYPE_TINKOFF_IIS:
+		case investapi.AccountType_ACCOUNT_TYPE_TINKOFF_IIS:
 			accountInfo += "🏦 "
-		case api.AccountType_ACCOUNT_TYPE_TINKOFF:
+		case investapi.AccountType_ACCOUNT_TYPE_TINKOFF:
 			accountInfo += "💰 "
 		}
-		accountInfo += account.GetName() + " "
-		portfolio, _, err := s.GetPortfolio(account.GetId())
+		if account.GetName() != "" {
+			accountInfo += account.GetName()
+		} else {
+			accountInfo += account.GetId()
+		}
+		var portfolio *investapi.PortfolioResponse
+		// TODO может это привести к общему виду? (isSandbox)
+		if isSandbox {
+			portfolio, _, err = s.GetSandboxPortfolio(account.GetId())
+		} else {
+			portfolio, _, err = s.GetPortfolio(account.GetId())
+		}
 		if err != nil {
 			log.Fatalf("Не удается получить портфолио аккаунта %s: %v", account.GetId(), err)
 		}
-		accountInfo += portfolioReport(portfolio)
+		accountInfo += " " + portfolioReport(portfolio)
 		accountsInfo = append(accountsInfo, accountInfo)
+		validAccounts = append(validAccounts, account)
 	}
 
 	// Выбор аккаунта для торговли
-	if invalidAccounts > 0 {
-		fmt.Printf(color.YellowString("Найдено аккаунтов без возможности торговли")+": %d\n", invalidAccounts)
+	if invalidAccounts >= len(accounts) {
+		log.Fatalln("По данному токену не найдено аккаунтов с доступом к торговле")
+	} else if invalidAccounts > 0 {
+		fmt.Printf(color.YellowString("Найдено аккаунтов без доступа к торговле")+": %d\n", invalidAccounts)
 	}
-	n := requestChoice("👤 Выберите аккаунт для торговли", accountsInfo)
-	account := accounts[n]
+	n := utils.RequestChoice("👤 Выберите аккаунт для торговли", accountsInfo, scanner)
+	account := validAccounts[n]
 
 	// Конфигурация стратегии
-	// TODO выбор и задание параметров стратегии (будет использоваться StrategyList)
-	strategy := config.StrategyConfig{
-		Name:   "simple",
-		Config: make(map[string]string, 0),
+	var ruleStrategyNames []string
+	for name := range rule_strategy.List {
+		ruleStrategyNames = append(ruleStrategyNames, name)
+	}
+	n = utils.RequestChoice("🕹 Выберите стратегию из предложенных", ruleStrategyNames, scanner)
+	ruleStrategyName := ruleStrategyNames[n]
+	n = utils.RequestChoice("🕯 Выберите свечной интервал", sdk.Intervals, scanner)
+	interval := sdk.Intervals[n]
+
+	// Задание дополнительных параметров для стратегии
+	requiredParameters := rule_strategy.RequiredParameters[ruleStrategyName]
+	other := make(map[string]int, len(requiredParameters))
+	for _, requiredParameter := range requiredParameters {
+		requestInt := utils.RequestInt(fmt.Sprintf("📏 Введите параметр \"%s\" для %s", requiredParameter, ruleStrategyName), scanner)
+		other[requiredParameter] = requestInt
+	}
+
+	strategyConfig := config.StrategyConfig{
+		Name:     ruleStrategyName,
+		Interval: interval,
+		Quantity: defaultQuantity,
+		Other:    other,
 	}
 
 	// Выбор акций для торговли
@@ -99,112 +141,71 @@ func main() {
 	if err != nil {
 		log.Fatalf("Не удается получить информацию об акциях: %v", err)
 	}
-	input := requestParameter("🛍 Введите тикеры акций для торговли", true)
-	tickers := strings.Split(input, " ")
-	for i := 0; i < len(tickers); i++ {
-		tickers[i] = strings.ToUpper(tickers[i])
-	}
 
-TickerLoop:
-	// Создание конфигурации для каждой акции
-	for _, ticker := range tickers {
-		for {
+	// Создание конфигурации для каждого тикера
+	isTryAgain := false
+	for {
+		var input string
+		if isTryAgain {
+			isTryAgain = false
+			input = utils.RequestString("🏷 Уточните тикеры акций введенные неверно (через пробел)", scanner)
+		} else {
+			input = utils.RequestString("🛍 Введите тикеры акций для торговли (через пробел)", scanner)
+		}
+		inputTickers := strings.Split(input, " ")
+	TickerLoop:
+		for _, inputTicker := range inputTickers {
 			for _, share := range responseShares {
-				if share.GetTicker() == ticker {
+				if share.GetTicker() == strings.ToUpper(inputTicker) {
 					tradingConfig := config.TradingConfig{
-						AccountId: account.GetId(),
-						Ticker:    ticker,
-						Figi:      share.GetFigi(),
-						Strategy:  strategy,
-						Exchange:  share.GetExchange(),
-						// TODO задание максимального количества лотов на акцию
-						MaxQuantity: 10,
+						AccountId:      account.GetId(),
+						IsSandbox:      isSandbox,
+						Ticker:         share.GetTicker(),
+						Figi:           share.GetFigi(),
+						Exchange:       share.GetExchange(),
+						StrategyConfig: strategyConfig,
 					}
-					filename := ticker + "_" + account.GetId() + ".yaml"
-					err := config.WriteTradingConfig(configsPath, filename, &tradingConfig)
-					if err != nil {
-						fmt.Println(color.YellowString("Торговая конфигурация %s не была записана %v", filename, err))
+					filename := share.GetTicker() + "_" + account.GetId() + ".yaml"
+					if err = config.WriteTradingConfig(configsPath, filename, &tradingConfig); err != nil {
+						color.Yellow("Торговая конфигурация %s не была записана %v", filename, err)
+						isTryAgain = true
 					}
+					color.Green("Торговая конфигурация %s успешно записана", filename)
 					continue TickerLoop
 				}
 			}
-			fmt.Println(color.YellowString("Инструмент с тикером \"" + ticker + "\" не найден!"))
-			ticker = strings.ToUpper(requestParameter("🖍 Уточните или пропустите тикер", false))
-			if ticker == "" {
-				continue TickerLoop
-			}
+			color.Yellow("Инструмент с тикером \"%s\" не найден!", inputTicker)
+			isTryAgain = true
+		}
+		if !isTryAgain {
+			break
 		}
 	}
-
-	fmt.Println(color.GreenString("👍 Удачной торговли!"))
+	fmt.Println("Вы можете изменять конфигурации вручную, если понимаете что делаете")
+	color.Green("👍 Удачной торговли!")
 }
 
-// Запросить у пользователя параметр в виде строки
-func requestParameter(msg string, required bool) string {
-	for {
-		fmt.Printf(color.BlueString(msg) + ": ")
-		if !scanner.Scan() {
-			if scanner.Err() == nil {
-				log.Fatalf("Ввод из консоли принудительно завершен")
-			} else {
-				fmt.Println(color.YellowString("Не удалось прочитать из консоли"))
-				continue
-			}
-		}
-		parameter := scanner.Text()
-		if required && parameter == "" {
-			fmt.Println(color.YellowString("Этот параметр является обязательным"))
-			continue
-		}
-		return parameter
-	}
-}
-
-// Запросить у пользователя выбор строки из предложенных строк
-func requestChoice(msg string, a []string) int {
-	if len(a) <= 0 {
-		log.Fatalf("Ошибка, передано 0 возможных значений")
-	}
-	for i, aa := range a {
-		fmt.Printf("%d. %s\n", i, aa)
-	}
-	for {
-		input := requestParameter(msg, true)
-		n, err := strconv.Atoi(input)
-		if err != nil {
-			fmt.Println(color.YellowString("Ошибка конвертации в целое число"))
-			continue
-		}
-		if n < 0 || n >= len(a) {
-			fmt.Println(color.YellowString("Введите число в промежутке [%d, %d]", 0, len(a)-1))
-			continue
-		}
-		return n
-	}
-}
-
-func portfolioReport(portfolio *api.PortfolioResponse) string {
-	totalAmount := convertMoneyValue(portfolio.GetTotalAmountCurrencies()) +
-		convertMoneyValue(portfolio.GetTotalAmountBonds()) +
-		convertMoneyValue(portfolio.GetTotalAmountShares()) +
-		convertMoneyValue(portfolio.GetTotalAmountEtf()) +
-		convertMoneyValue(portfolio.GetTotalAmountFutures())
-
-	expectedYield := float64(portfolio.ExpectedYield.Units) + float64(portfolio.ExpectedYield.Nano)/1000000000
+func portfolioReport(portfolio *investapi.PortfolioResponse) string {
+	totalAmount := sdk.MoneyValueToFloat(portfolio.GetTotalAmountCurrencies()) +
+		sdk.MoneyValueToFloat(portfolio.GetTotalAmountBonds()) +
+		sdk.MoneyValueToFloat(portfolio.GetTotalAmountShares()) +
+		sdk.MoneyValueToFloat(portfolio.GetTotalAmountEtf()) +
+		sdk.MoneyValueToFloat(portfolio.GetTotalAmountFutures())
 
 	report := bold("%.2f₽ ", totalAmount)
-	income := fmt.Sprintf("%.2f₽ (%.2f%%)", totalAmount*expectedYield/100, math.Abs(expectedYield))
-	switch {
-	case expectedYield < 0:
-		report += color.RedString(income)
-	case expectedYield > 0:
-		report += color.GreenString(income)
-	default:
-		report += color.WhiteString(income)
+	if portfolio.ExpectedYield != nil {
+		expectedYield := sdk.QuotationToFloat(portfolio.ExpectedYield)
+
+		income := fmt.Sprintf("%.2f₽ (%.2f%%)", totalAmount*expectedYield/100, math.Abs(expectedYield))
+		switch {
+		case expectedYield < 0:
+			report += color.RedString(income)
+		case expectedYield > 0:
+			report += color.GreenString(income)
+		default:
+			report += color.WhiteString(income)
+		}
+		return report
 	}
 	return report
-}
-
-func convertMoneyValue(moneyValue *api.MoneyValue) float64 {
-	return float64(moneyValue.Units) + float64(moneyValue.Nano)/1000000000
 }
