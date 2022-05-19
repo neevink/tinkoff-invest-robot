@@ -15,30 +15,21 @@ type Wrapper struct {
 	sdk           *sdk.SDK
 	logger        *zap.Logger
 
-	timeSeries    *techan.TimeSeries
-	tradingRecord *techan.TradingRecord
+	TimeSeries    *techan.TimeSeries
+	TradingRecord *techan.TradingRecord
 	ruleStrategy  *techan.RuleStrategy
 }
 
-// Step TODO вообще этот метод одинаковый для всех, че придумать?
 func (W Wrapper) Step(candle *techan.Candle) Operation {
-	W.timeSeries.AddCandle(candle) // добавляем пришедшую свечу (неважно откуда)
+	W.TimeSeries.AddCandle(candle) // добавляем пришедшую свечу (неважно откуда)
 
-	if W.ruleStrategy.ShouldEnter(W.timeSeries.LastIndex(), W.tradingRecord) {
+	if W.ruleStrategy.ShouldEnter(W.TimeSeries.LastIndex(), W.TradingRecord) {
 		return Buy
-	} else if W.ruleStrategy.ShouldExit(W.timeSeries.LastIndex(), W.tradingRecord) {
+	} else if W.ruleStrategy.ShouldExit(W.TimeSeries.LastIndex(), W.TradingRecord) {
 		return Sell
 	} else {
 		return Hold
 	}
-}
-
-func (W Wrapper) AddTrade(order techan.Order) {
-	W.tradingRecord.Operate(order)
-}
-
-func (W Wrapper) GetTrades() []*techan.Position {
-	return W.tradingRecord.Trades
 }
 
 func (W Wrapper) Consume(data *investapi.MarketDataResponse) {
@@ -64,12 +55,12 @@ func (W Wrapper) Consume(data *investapi.MarketDataResponse) {
 				zap.Error(err),
 			)
 		} else {
-			W.AddTrade(techan.Order{
+			W.TradingRecord.Operate(techan.Order{
 				Side:          techan.OrderSide(op),
 				Security:      orderId,
 				Price:         big.NewDecimal(sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
 				Amount:        big.NewFromInt(int(resp.GetLotsExecuted())),
-				ExecutionTime: W.timeSeries.LastCandle().Period.End,
+				ExecutionTime: W.TimeSeries.LastCandle().Period.End,
 			})
 
 			W.logger.Info(
@@ -100,12 +91,12 @@ func (W Wrapper) Consume(data *investapi.MarketDataResponse) {
 				zap.Error(err),
 			)
 		} else {
-			W.AddTrade(techan.Order{
+			W.TradingRecord.Operate(techan.Order{
 				Side:          techan.OrderSide(op),
 				Security:      orderId,
 				Price:         big.NewDecimal(sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
 				Amount:        big.NewFromInt(int(resp.GetLotsExecuted())),
-				ExecutionTime: W.timeSeries.LastCandle().Period.End,
+				ExecutionTime: W.TimeSeries.LastCandle().Period.End,
 			})
 
 			W.logger.Info(
@@ -121,7 +112,7 @@ func (W Wrapper) Consume(data *investapi.MarketDataResponse) {
 		W.logger.Info(
 			"Share ждет",
 			zap.String("figi", W.tradingConfig.Figi),
-			zap.Float64("curPrice", W.timeSeries.LastCandle().ClosePrice.Float()),
+			zap.Float64("curPrice", W.TimeSeries.LastCandle().ClosePrice.Float()),
 			zap.String("ruleStrategy", W.tradingConfig.Strategy.Name),
 		)
 	default:

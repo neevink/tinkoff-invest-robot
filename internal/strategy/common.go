@@ -31,8 +31,8 @@ func FromConfig(tradingConfig *config.TradingConfig, s *sdk.SDK, logger *zap.Log
 		tradingConfig: tradingConfig,
 		sdk:           s,
 		logger:        logger,
-		timeSeries:    timeSeries,
-		tradingRecord: tradingRecord,
+		TimeSeries:    timeSeries,
+		TradingRecord: tradingRecord,
 		ruleStrategy:  &ruleStrategy,
 	}
 

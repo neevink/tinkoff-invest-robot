@@ -159,6 +159,7 @@ func main() {
 				if share.GetTicker() == strings.ToUpper(inputTicker) {
 					tradingConfig := config.TradingConfig{
 						AccountId: account.GetId(),
+						IsSandbox: isSandbox,
 						Ticker:    share.GetTicker(),
 						Figi:      share.GetFigi(),
 						Exchange:  share.GetExchange(),

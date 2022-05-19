@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/fatih/color"
 )
@@ -64,9 +65,23 @@ func RequestInt(msg string, scanner *bufio.Scanner) int {
 	for {
 		input := RequestString(msg, scanner)
 		if n, err := strconv.Atoi(input); err != nil {
-			color.Yellow("Ошибка конвертации в целое число, %v", err)
+			color.Yellow("Ошибка конвертации в целое число: %v", err)
 		} else {
 			return n
+		}
+	}
+}
+
+const layout = "020106"
+
+// RequestDate Запросить у пользователя дату
+func RequestDate(msg string, scanner *bufio.Scanner) time.Time {
+	for {
+		input := RequestString(msg, scanner)
+		if t, err := time.Parse(layout, input); err != nil {
+			color.Yellow("Ошибка конвертации во время: %v", err)
+		} else {
+			return t
 		}
 	}
 }

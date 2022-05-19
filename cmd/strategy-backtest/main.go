@@ -53,7 +53,9 @@ func main() {
 	tradingConfigs := config.LoadTradingConfigsFromDir(configsPath)
 	var tradingConfigsInfo []string
 	for _, tradingConfig := range tradingConfigs {
-		tradingConfigsInfo = append(tradingConfigsInfo, configReport(tradingConfig))
+		tradingConfigsInfo = append(tradingConfigsInfo,
+			fmt.Sprintf("%s: %s_%s", tradingConfig.Strategy.Name, tradingConfig.Ticker, tradingConfig.AccountId),
+		)
 	}
 	if len(tradingConfigs) == 0 {
 		log.Fatalf("Стратегий в %s не было найдено, попробуйте сгенерировать новые", configsPath)
@@ -61,14 +63,39 @@ func main() {
 	n := utils.RequestChoice("📈 Выберите стратегию для тестирования", tradingConfigsInfo, scanner)
 	tradingConfig := tradingConfigs[n]
 
-	candles, _, err := s.GetCandles(
-		tradingConfig.Figi,
-		time.Now().Add(-time.Hour*24), // TODO задание времени стратегии
-		time.Now(),
-		sdk.IntervalToCandleInterval(tradingConfig.Strategy.Interval),
-	)
-	if err != nil {
-		log.Fatalf("Не удается получить свечи: %v", err)
+	vars := []string{"За последние сутки", "За последнюю неделю", "За последний месяц", "Свой промежуток (не больше месяца)"}
+	vals := []time.Duration{1, 7, 30, 0}
+	n = utils.RequestChoice("🕰 На каком отрезке протестировать стратегию?", vars, scanner)
+	var from, to time.Time
+	var candles []*investapi.HistoricCandle
+	if vals[n] == 0 {
+		for {
+			from = utils.RequestDate("🎬 Введите дату начала в формате DDMMYY", scanner)
+			to = utils.RequestDate("🎬 Введите дату конца в формате DDMMYY", scanner)
+			if from.After(to) {
+				color.Yellow("Дата начала позже даты конца")
+			} else if to.Sub(from) > time.Hour*24*31 {
+				color.Yellow("Промежуток должен быть не больше месяца")
+			} else {
+				break
+			}
+		}
+	} else {
+		to = time.Now()
+		from = to.Add(-time.Hour * 24 * vals[n])
+	}
+	for from.Before(to) {
+		c, _, err := s.GetCandles(
+			tradingConfig.Figi,
+			from,
+			from.AddDate(0, 0, 1),
+			sdk.IntervalToCandleInterval(tradingConfig.Strategy.Interval),
+		)
+		if err != nil {
+			log.Fatalf("Не удается получить свечи: %v", err)
+		}
+		candles = append(candles, c...)
+		from = from.AddDate(0, 0, 1)
 	}
 
 	strategyWrapper, err := strategy.FromConfig(tradingConfig, s, logger)
@@ -76,53 +103,30 @@ func main() {
 		log.Fatalf("Не удается инициализировать стратегию: %v", err)
 	}
 
-	// TODO еще много че не закончено
-	for _, candle := range candles { // будем попорядку добавлять свечи, имитируя консумер (такая штука может находиться в консумере)
+	for _, candle := range candles {
 		op := strategyWrapper.Step(sdk.HistoricCandleToCandle(candle, sdk.IntervalToDuration(tradingConfig.Strategy.Interval)))
 		switch op {
 		case strategy.Buy:
-			strategyWrapper.AddTrade(techan.Order{
-				Side:          techan.BUY,
-				Security:      "uid",
-				Price:         big.Decimal{},
-				Amount:        big.Decimal{},
-				ExecutionTime: candle.Time.AsTime(),
-			})
+			fallthrough
 		case strategy.Sell:
-			strategyWrapper.AddTrade(techan.Order{
-				Side:          techan.BUY,
-				Security:      "uid",
-				Price:         big.Decimal{},
-				Amount:        big.Decimal{},
+			strategyWrapper.TradingRecord.Operate(techan.Order{
+				Side:          techan.OrderSide(op),
+				Price:         big.NewDecimal(sdk.QuotationToFloat(candle.Close)),
+				Amount:        big.NewFromInt(int(tradingConfig.Strategy.Quantity)),
 				ExecutionTime: candle.Time.AsTime(),
 			})
 		case strategy.Hold:
 			continue
 		default:
-			panic("не определено")
+			panic("Значение не определено")
 		}
 	}
-	for _, trade := range strategyWrapper.GetTrades() {
-		fmt.Println("buy:", trade.EntranceOrder().ExecutionTime, trade.EntranceOrder().Amount,
-			"sell:", trade.ExitOrder().ExecutionTime, trade.ExitOrder().Amount)
+
+	income := 0.0
+	for _, trade := range strategyWrapper.TradingRecord.Trades {
+		res := trade.ExitOrder().Price.Sub(trade.EntranceOrder().Price).Float()
+		fmt.Printf("res: %f\n", res)
+		income += res
 	}
-}
-
-// Создает краткую информацию о стратегии
-func configReport(tradingConfig *config.TradingConfig) string {
-	// TODO pretty input %v %#v или еще что лучше
-	return fmt.Sprintf("%s_%s: %s %v",
-		tradingConfig.Ticker,
-		tradingConfig.AccountId,
-		tradingConfig.Strategy.Name,
-		tradingConfig.Strategy.Other)
-}
-
-func timeSeriesFromHistoricCandles(candles []*investapi.HistoricCandle, period time.Duration) *techan.TimeSeries {
-	series := techan.NewTimeSeries()
-
-	for _, c := range candles {
-		series.AddCandle(sdk.HistoricCandleToCandle(c, period))
-	}
-	return series
+	fmt.Println("income:", income)
 }

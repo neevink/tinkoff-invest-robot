@@ -21,7 +21,7 @@ type StrategyConfig struct {
 
 type TradingConfig struct {
 	AccountId string         `yaml:"account_id"`
-	isSandbox bool           `yaml:"is_sandbox"`
+	IsSandbox bool           `yaml:"is_sandbox"`
 	Ticker    string         `yaml:"ticker"`
 	Figi      string         `yaml:"figi"`
 	Exchange  string         `yaml:"exchange"`
