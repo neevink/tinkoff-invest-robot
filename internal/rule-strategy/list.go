@@ -8,7 +8,10 @@ import (
 
 var (
 	// List единственное место, где задаются стратегии
-	List = map[string]func(tradingConfig config.TradingConfig) (techan.RuleStrategy, *techan.TimeSeries, *techan.TradingRecord){
+	List = map[string]func(tradingConfig config.TradingConfig) (techan.RuleStrategy, *techan.TimeSeries){
 		"simpleEma": SimpleEma,
+	}
+	RequiredParameters = map[string][]string{
+		"simpleEma": {"window"},
 	}
 )

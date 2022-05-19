@@ -6,14 +6,12 @@ import (
 	"tinkoff-invest-bot/internal/config"
 )
 
-func SimpleEma(tradingConfig config.TradingConfig) (techan.RuleStrategy, *techan.TimeSeries, *techan.TradingRecord) {
+func SimpleEma(tradingConfig config.TradingConfig) (techan.RuleStrategy, *techan.TimeSeries) {
 	var window = tradingConfig.Strategy.Other["window"]          // TODO как обработать отсутствие значения
 	series := techan.NewTimeSeries()                             // история всех свечей
 	closePrices := techan.NewClosePriceIndicator(series)         // отсеивает High, Low, Open, на выходе только Close
 	movingAverage := techan.NewEMAIndicator(closePrices, window) // Создает экспоненциальное средне с окном в n свечей
 
-	// создание структуры стратегии и истории трейдинга
-	tradingRecord := techan.NewTradingRecord()
 	entryRule := techan.And( // правило входа
 		techan.NewCrossUpIndicatorRule(movingAverage, closePrices), // когда свеча закрытия пересечет EMA (станет выше EMA)
 		techan.PositionNewRule{})                                   // и сделок не открыто — мы покупаем
@@ -25,5 +23,5 @@ func SimpleEma(tradingConfig config.TradingConfig) (techan.RuleStrategy, *techan
 		EntryRule:      entryRule,
 		ExitRule:       exitRule,
 	}
-	return ruleStrategy, series, tradingRecord
+	return ruleStrategy, series
 }

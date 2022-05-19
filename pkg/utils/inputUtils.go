@@ -3,52 +3,70 @@ package utils
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"strconv"
 
 	"github.com/fatih/color"
 )
 
-// RequestParameter Запросить у пользователя параметр в виде строки
-func RequestParameter(msg string, required bool, scanner *bufio.Scanner) string {
+// RequestString Запросить у пользователя параметр в виде строки
+func RequestString(msg string, scanner *bufio.Scanner) string {
 	for {
 		fmt.Printf(color.BlueString(msg) + ": ")
 		if !scanner.Scan() {
 			if scanner.Err() == nil {
-				log.Fatalf("Ввод из консоли принудительно завершен")
+				panic("Ввод из консоли принудительно завершен")
 			} else {
-				fmt.Println(color.YellowString("Не удалось прочитать из консоли"))
+				color.Yellow("Не удалось прочитать из консоли: %v", scanner.Err())
 				continue
 			}
 		}
-		parameter := scanner.Text()
-		if required && parameter == "" {
-			fmt.Println(color.YellowString("Этот параметр является обязательным"))
-			continue
+		input := scanner.Text()
+		if input != "" {
+			return input
 		}
-		return parameter
 	}
 }
 
 // RequestChoice Запросить у пользователя выбор строки из предложенных строк
 func RequestChoice(msg string, a []string, scanner *bufio.Scanner) int {
 	if len(a) <= 0 {
-		log.Fatalf("Ошибка, передано 0 возможных значений")
+		panic("Ошибка, в RequestChoice передано 0 возможных значений")
 	}
 	for i, aa := range a {
 		fmt.Printf("%d. %s\n", i, aa)
 	}
 	for {
-		input := RequestParameter(msg, true, scanner)
-		n, err := strconv.Atoi(input)
-		if err != nil {
-			fmt.Println(color.YellowString("Ошибка конвертации в целое число"))
-			continue
+		if n := RequestInt(msg, scanner); n >= 0 && n < len(a) {
+			return n
+		} else {
+			color.Yellow("Введите число в промежутке [%d, %d]", 0, len(a)-1)
 		}
-		if n < 0 || n >= len(a) {
-			fmt.Println(color.YellowString("Введите число в промежутке [%d, %d]", 0, len(a)-1))
-			continue
+	}
+}
+
+const yes, no = "y", "n"
+
+// RequestBool Запросить у пользователя yes or no
+func RequestBool(msg string, scanner *bufio.Scanner) bool {
+	for {
+		input := RequestString(fmt.Sprintf("%s (%s/%s)", msg, yes, no), scanner)
+		if input == yes {
+			return true
+		} else if input == no {
+			return false
 		}
-		return n
+		color.Yellow("Есть только %s и %s", yes, no)
+	}
+}
+
+// RequestInt Запросить у пользователя параметр в виде целого числа
+func RequestInt(msg string, scanner *bufio.Scanner) int {
+	for {
+		input := RequestString(msg, scanner)
+		if n, err := strconv.Atoi(input); err != nil {
+			color.Yellow("Ошибка конвертации в целое число, %v", err)
+		} else {
+			return n
+		}
 	}
 }
