@@ -15,7 +15,10 @@ import (
 
 func main() {
 	logConf := zap.NewProductionConfig()
-
+	err := config.CreateDirIfNotExist("./logs")
+	if err != nil {
+		log.Fatalf("Cant create dir: %v", err)
+	}
 	logConf.OutputPaths = []string{
 		"stdout", "./logs/run-robot-stdout.log",
 	}

@@ -1,6 +1,8 @@
 package strategy
 
 import (
+	"fmt"
+
 	"github.com/sdcoffey/big"
 	"github.com/sdcoffey/techan"
 	"go.uber.org/zap"
@@ -25,7 +27,9 @@ type Wrapper struct {
 }
 
 func (w Wrapper) Step(candle *techan.Candle) Operation {
-	w.TimeSeries.AddCandle(candle) // добавляем пришедшую свечу (неважно откуда)
+	if w.TimeSeries.AddCandle(candle) {
+		fmt.Printf("%v %s: %f\n", w.TimeSeries.LastIndex(), w.tradingConfig.Ticker, candle.ClosePrice.Float())
+	} // добавляем пришедшую свечу (неважно откуда)
 
 	if w.ruleStrategy.ShouldEnter(w.TimeSeries.LastIndex(), w.TradingRecord) {
 		return Buy
@@ -84,9 +88,10 @@ func (w Wrapper) Consume(data *investapi.MarketDataResponse) {
 			w.logger.Info(
 				"Can't Buy share",
 				zap.String("accountId", w.tradingConfig.AccountId),
-				zap.Bool("isSandbox", w.tradingConfig.IsSandbox),
 				zap.String("figi", w.tradingConfig.Figi),
+				zap.String("ticker", w.tradingConfig.Ticker),
 				zap.Float64("price", sdk.MoneyValueToFloat(resp.GetInitialOrderPrice())),
+				zap.Int("candleNo", w.TimeSeries.LastIndex()),
 				zap.String("ruleStrategy", w.tradingConfig.StrategyConfig.Name),
 				zap.String("orderId", orderId),
 				zap.String("trackingId", trackingId),
@@ -97,16 +102,17 @@ func (w Wrapper) Consume(data *investapi.MarketDataResponse) {
 				Side:          techan.OrderSide(op),
 				Security:      orderId,
 				Price:         big.NewDecimal(sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
-				Amount:        big.NewFromInt(int(resp.GetLotsExecuted())),
+				Amount:        big.NewDecimal(sdk.MoneyValueToFloat(resp.GetTotalOrderAmount())),
 				ExecutionTime: w.TimeSeries.LastCandle().Period.End,
 			})
 
 			w.logger.Info(
 				"Buy new share",
 				zap.String("accountId", w.tradingConfig.AccountId),
-				zap.Bool("isSandbox", w.tradingConfig.IsSandbox),
 				zap.String("figi", w.tradingConfig.Figi),
+				zap.String("ticker", w.tradingConfig.Ticker),
 				zap.Float64("price", sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
+				zap.Int("candleNo", w.TimeSeries.LastIndex()),
 				zap.String("ruleStrategy", w.tradingConfig.StrategyConfig.Name),
 				zap.String("orderId", orderId),
 				zap.String("trackingId", trackingId),
@@ -138,9 +144,10 @@ func (w Wrapper) Consume(data *investapi.MarketDataResponse) {
 			w.logger.Info(
 				"Can't sell new share",
 				zap.String("accountId", w.tradingConfig.AccountId),
-				zap.Bool("isSandbox", w.tradingConfig.IsSandbox),
 				zap.String("figi", w.tradingConfig.Figi),
+				zap.String("ticker", w.tradingConfig.Ticker),
 				zap.Float64("price", sdk.MoneyValueToFloat(resp.GetInitialOrderPrice())),
+				zap.Int("candleNo", w.TimeSeries.LastIndex()),
 				zap.String("ruleStrategy", w.tradingConfig.StrategyConfig.Name),
 				zap.String("orderId", orderId),
 				zap.String("trackingId", trackingId),
@@ -151,16 +158,18 @@ func (w Wrapper) Consume(data *investapi.MarketDataResponse) {
 				Side:          techan.OrderSide(op),
 				Security:      orderId,
 				Price:         big.NewDecimal(sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
-				Amount:        big.NewFromInt(int(resp.GetLotsExecuted())),
+				Amount:        big.NewDecimal(sdk.MoneyValueToFloat(resp.GetTotalOrderAmount())),
 				ExecutionTime: w.TimeSeries.LastCandle().Period.End,
 			})
 
 			w.logger.Info(
 				"Sell share",
 				zap.String("accountId", w.tradingConfig.AccountId),
-				zap.Bool("isSandbox", w.tradingConfig.IsSandbox),
 				zap.String("figi", w.tradingConfig.Figi),
+				zap.String("ticker", w.tradingConfig.Ticker),
 				zap.Float64("price", sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
+				zap.Int("candleNo", w.TimeSeries.LastIndex()),
+				zap.Float64("income", w.TradingRecord.LastTrade().ExitOrder().Amount.Sub(w.TradingRecord.LastTrade().EntranceOrder().Amount).Float()),
 				zap.String("ruleStrategy", w.tradingConfig.StrategyConfig.Name),
 				zap.String("orderId", orderId),
 				zap.String("trackingId", trackingId),
@@ -168,12 +177,6 @@ func (w Wrapper) Consume(data *investapi.MarketDataResponse) {
 			// w.blockChannel <- FinishEvent{}
 		}
 	case Hold:
-		w.logger.Info(
-			"Algorithm is waiting",
-			zap.String("figi", w.tradingConfig.Figi),
-			zap.Float64("curPrice", w.TimeSeries.LastCandle().ClosePrice.Float()),
-			zap.String("ruleStrategy", w.tradingConfig.StrategyConfig.Name),
-		)
 	default:
 	}
 }
