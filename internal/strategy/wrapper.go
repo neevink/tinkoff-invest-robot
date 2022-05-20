@@ -105,14 +105,28 @@ func (w Wrapper) Consume(data *investapi.MarketDataResponse) {
 	case Sell:
 		orderId := sdk.GenerateOrderId()
 
-		if resp, trackingId, err := w.sdk.SandboxMarketSell(
-			w.tradingConfig.Figi,
-			w.tradingConfig.StrategyConfig.Quantity,
-			w.tradingConfig.AccountId,
-			orderId,
-		); err != nil {
+		var resp *investapi.PostOrderResponse
+		var trackingId string
+		var err error
+		if w.tradingConfig.IsSandbox {
+			resp, trackingId, err = w.sdk.SandboxMarketSell(
+				w.tradingConfig.Figi,
+				w.tradingConfig.StrategyConfig.Quantity,
+				w.tradingConfig.AccountId,
+				orderId,
+			)
+		} else {
+			resp, trackingId, err = w.sdk.RealMarketSell(
+				w.tradingConfig.Figi,
+				w.tradingConfig.StrategyConfig.Quantity,
+				w.tradingConfig.AccountId,
+				orderId,
+			)
+		}
+
+		if err != nil {
 			w.logger.Info(
-				"Can't Sell new share",
+				"Can't sell new share",
 				zap.String("accountId", w.tradingConfig.AccountId),
 				zap.Bool("isSandbox", w.tradingConfig.IsSandbox),
 				zap.String("figi", w.tradingConfig.Figi),
@@ -145,7 +159,7 @@ func (w Wrapper) Consume(data *investapi.MarketDataResponse) {
 		}
 	case Hold:
 		w.logger.Info(
-			"Share ждет",
+			"Algorithm is waiting",
 			zap.String("figi", w.tradingConfig.Figi),
 			zap.Float64("curPrice", w.TimeSeries.LastCandle().ClosePrice.Float()),
 			zap.String("ruleStrategy", w.tradingConfig.StrategyConfig.Name),
@@ -176,7 +190,7 @@ func (w Wrapper) Stop() error {
 		return err
 	}
 	w.logger.Info(
-		"Invest robot stopped",
+		"Algorithm stopped",
 		zap.String("figi", w.tradingConfig.Figi),
 		zap.String("ruleStrategy", w.tradingConfig.StrategyConfig.Name),
 	)
