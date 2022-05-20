@@ -17,16 +17,12 @@ type investRobot struct {
 	tradingConfig   *config.TradingConfig
 	tradingStrategy *strategy.Wrapper
 	logger          *zap.Logger
+
+	restartDelay time.Duration
 }
 
-func New(conf *config.RobotConfig, tradingConfig *config.TradingConfig, logger *zap.Logger, ctx context.Context) (*investRobot, error) {
-	s, err := sdk.New(conf.TinkoffApiEndpoint, conf.TinkoffAccessToken, conf.AppName, ctx)
-	if err != nil {
-		return nil, xerrors.Errorf("can't init sdk: %v", err)
-	}
-	s.Run()
-
-	tradingStrategy, err := strategy.FromConfig(tradingConfig, s, logger)
+func New(conf *config.RobotConfig, tradingConfig *config.TradingConfig, sdk *sdk.SDK, logger *zap.Logger, ctx context.Context) (*investRobot, error) {
+	tradingStrategy, err := strategy.FromConfig(tradingConfig, sdk, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -36,26 +32,46 @@ func New(conf *config.RobotConfig, tradingConfig *config.TradingConfig, logger *
 		tradingConfig:   tradingConfig,
 		tradingStrategy: tradingStrategy,
 		logger:          logger,
+
+		restartDelay: 5 * time.Second,
 	}, nil
 }
 
-func (r *investRobot) Run() error {
+func (r *investRobot) Run() {
+	for {
+		r.logger.Info(
+			"Micro-robot started",
+			zap.String("ticker", r.tradingConfig.Figi),
+		)
+
+		if err := r.run(); err != nil {
+			r.logger.Info(
+				"Micro-robot finished with error",
+				zap.String("ticker", r.tradingConfig.Figi),
+				zap.Error(err),
+			)
+		} else {
+			r.logger.Info(
+				"Micro-robot finished successfully",
+				zap.String("ticker", r.tradingConfig.Figi),
+			)
+		}
+
+		time.Sleep(r.restartDelay)
+	}
+}
+
+func (r *investRobot) run() error {
 	err := (*r.tradingStrategy).Start()
 	if err != nil {
-		return xerrors.Errorf("can't start robot tradingStrategy, %v", err)
+		return xerrors.Errorf("can't start robot trading strategy, %v", err)
 	}
 
-	r.logger.Info(
-		"Invest robot successfully run",
-		zap.String("figi", r.tradingConfig.Figi),
-		zap.String("tradingStrategy", r.tradingConfig.StrategyConfig.Name),
-	)
-
-	time.Sleep(6000 * time.Second)
+	(*r.tradingStrategy).BlockUntilEnd()
 
 	err = (*r.tradingStrategy).Stop()
 	if err != nil {
-		return xerrors.Errorf("can't stop robot tradingStrategy, %v", err)
+		return xerrors.Errorf("can't stop robot trading strategy, %v", err)
 	}
 	return nil
 }

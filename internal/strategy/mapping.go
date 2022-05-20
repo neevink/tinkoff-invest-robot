@@ -1,9 +1,11 @@
 package strategy
 
 import (
+	"time"
+
 	"github.com/sdcoffey/big"
 	"github.com/sdcoffey/techan"
-	"time"
+
 	"tinkoff-invest-bot/investapi"
 	"tinkoff-invest-bot/pkg/sdk"
 )

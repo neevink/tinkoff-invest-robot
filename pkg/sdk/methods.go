@@ -280,3 +280,40 @@ func (s *SDK) GetPortfolio(accountId string) (*api.PortfolioResponse, string, er
 	}
 	return resp, trackingId, nil
 }
+
+func (s *SDK) RealMarketBuy(figi string, quantity int64, accountId string, orderId string) (*api.PostOrderResponse, string, error) {
+	return s.postSandboxMarketOrder(figi, quantity, api.OrderDirection_ORDER_DIRECTION_BUY, accountId, orderId)
+}
+
+func (s *SDK) RealMarketSell(figi string, quantity int64, accountId string, orderId string) (*api.PostOrderResponse, string, error) {
+	return s.postSandboxMarketOrder(figi, quantity, api.OrderDirection_ORDER_DIRECTION_SELL, accountId, orderId)
+}
+
+func (s *SDK) postMarketOrder(figi string, quantity int64, direction api.OrderDirection, accountId string, orderId string) (*api.PostOrderResponse, string, error) {
+	var header, trailer metadata.MD
+
+	resp, err := s.orders.PostOrder(
+		s.ctx,
+		&api.PostOrderRequest{
+			Figi:      figi,
+			Quantity:  quantity,
+			Price:     nil,
+			Direction: direction,
+			AccountId: accountId,
+			OrderType: api.OrderType_ORDER_TYPE_MARKET,
+			OrderId:   orderId,
+		},
+		grpc.Header(&header),
+		grpc.Trailer(&trailer),
+	)
+
+	trackingId := extractTrackingId(&header, &trailer)
+
+	if err != nil {
+		if extractedError := extractRequestError(&trailer); extractedError != nil {
+			return nil, trackingId, extractedError
+		}
+		return nil, trackingId, err
+	}
+	return resp, trackingId, nil
+}

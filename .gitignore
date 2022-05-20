@@ -5,9 +5,12 @@
 investapi/*.go
 
 # output
-run-robot
+cli
 generate-config
+run-robot
 strategy-backtest
 configs/generated/
+logs/
 
+# misc
 .env
