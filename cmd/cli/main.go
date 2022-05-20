@@ -57,7 +57,7 @@ func main() {
 		orderId := sdk.GenerateOrderId()
 		resp, trackingId, err := s.RealMarketBuy(figi, 1, accountId, orderId)
 		if err != nil {
-			fmt.Printf("Error %w", err)
+			fmt.Printf("Error %e", err)
 			fmt.Printf("Tracking ID: %v\n", trackingId)
 		} else {
 			fmt.Printf("Responce: %v\n", resp)
@@ -68,7 +68,7 @@ func main() {
 		orderId := sdk.GenerateOrderId()
 		resp, trackingId, err := s.RealMarketSell(figi, 1, accountId, orderId)
 		if err != nil {
-			fmt.Printf("Error %w", err)
+			fmt.Printf("Error %e", err)
 			fmt.Printf("Tracking ID: %v\n", trackingId)
 		} else {
 			fmt.Printf("Responce: %v\n", resp)
