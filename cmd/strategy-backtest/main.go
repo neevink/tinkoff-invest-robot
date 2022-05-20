@@ -27,6 +27,10 @@ const (
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
+	err := config.CreateDirIfNotExist("./logs")
+	if err != nil {
+		log.Fatalf("Cant create dir: %v", err)
+	}
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Fatalf("Cant create production logger: %v", err)

@@ -40,7 +40,7 @@ func LoadTradingsConfig(filename string) *TradingConfig {
 
 // LoadTradingConfigsFromDir Загружает торговые конфигурации из папки
 func LoadTradingConfigsFromDir(dirname string) []*TradingConfig {
-	if err := createDirIfNotExist(dirname); err != nil {
+	if err := CreateDirIfNotExist(dirname); err != nil {
 		log.Fatalf("Ошибка создания папки для сгенерированных конфигов: %v", err)
 	}
 	files, err := ioutil.ReadDir(dirname)
@@ -59,7 +59,7 @@ func LoadTradingConfigsFromDir(dirname string) []*TradingConfig {
 
 // WriteTradingConfig Сохраняет торговый конфиг
 func WriteTradingConfig(dirname string, filename string, config *TradingConfig) error {
-	if err := createDirIfNotExist(dirname); err != nil {
+	if err := CreateDirIfNotExist(dirname); err != nil {
 		log.Fatalf("Ошибка создания папки для сгенерированных конфигов: %v", err)
 	}
 	yamlData, err := yaml.Marshal(config)
@@ -72,8 +72,8 @@ func WriteTradingConfig(dirname string, filename string, config *TradingConfig) 
 	return nil
 }
 
-// Создает папку если еще не была создана
-func createDirIfNotExist(dirname string) error {
+// CreateDirIfNotExist Создает папку если еще не была создана
+func CreateDirIfNotExist(dirname string) error {
 	if _, err := os.Stat(dirname); os.IsNotExist(err) {
 		if err := os.Mkdir(dirname, writeMode); err != nil {
 			return xerrors.Errorf("Ошибка создания папки: %v", err)
