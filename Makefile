@@ -17,6 +17,7 @@ all:
 	@exit 0
 
 build: compile-proto
+	go build -v ./cmd/cli/
 	go build -v ./cmd/run-robot/
 	go build -v ./cmd/generate-config/
 	go build -v ./cmd/strategy-backtest/
@@ -31,12 +32,12 @@ setup-dev:
 
 clean:
 	rm -f $(TINKOFF_PROTO)/*.go
+	rm -f ./cli
 	rm -f ./run-robot
 	rm -f ./generate-config
 	rm -f ./strategy-backtest
 
-compile-proto:
-	make clean
+compile-proto: clean
 	protoc -I=$(TINKOFF_PROTO) --go_out=$(TINKOFF_PROTO)/ --go-grpc_out=$(TINKOFF_PROTO)/ $(TINKOFF_PROTO)/*
 
 lint:

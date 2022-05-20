@@ -43,14 +43,16 @@ func New(address string, token string, appName string, ctx context.Context) (*SD
 		return nil, xerrors.Errorf("can't connect to gRPC server: %v", err)
 	}
 
+	ctx = prepareOutgoingContext(ctx, token, appName)
+
 	marketDataStream := api.NewMarketDataStreamServiceClient(conn)
-	stream, err := marketDataStream.MarketDataStream(prepareOutgoingContext(ctx, token, appName))
+	stream, err := marketDataStream.MarketDataStream(ctx)
 	if err != nil {
 		return nil, xerrors.Errorf("can't careate market date stream: %v", err)
 	}
 
 	return &SDK{
-		ctx:  prepareOutgoingContext(ctx, token, appName),
+		ctx:  ctx,
 		conn: conn,
 
 		instruments:      api.NewInstrumentsServiceClient(conn),
@@ -73,7 +75,7 @@ func (s *SDK) Run() {
 		for {
 			in, err := s.marketDataStreamClient.Recv()
 			if err == io.EOF {
-				log.Fatalf("Date stream closed")
+				log.Fatalf("Data stream closed")
 				return
 			}
 			if err != nil {

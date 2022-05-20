@@ -6,25 +6,18 @@ import (
 	api "tinkoff-invest-bot/investapi"
 )
 
-func (s *SDK) SubscribeCandles(figi string, interval api.SubscriptionInterval, consumer *TickerPriceConsumerInterface) error {
-	// TODO блять кирилл нихуя не понятно, сделай так чтобы я на свечи мог подписаться
-	panic("блять кирилл нихуя не понятно, сделай так чтобы я на свечи мог подписаться")
-}
-
-func (s *SDK) UnsubscribeCandles(figi string, consumer *TickerPriceConsumerInterface) error {
-	// TODO блять кирилл нихуя не понятно, сделай так чтобы я на свечи мог подписаться
-	panic("блять кирилл нихуя не понятно, сделай так чтобы я на свечи мог подписаться")
-}
-
-func (s *SDK) SubscribeMarketData(figi string, consumer *TickerPriceConsumerInterface) error {
+func (s *SDK) SubscribeMarketData(figi string, interval api.SubscriptionInterval, consumer *TickerPriceConsumerInterface) error {
 	consumers, contains := s.marketDataConsumers[figi]
 	if !contains {
 		subscribeRequest := api.MarketDataRequest{
-			Payload: &api.MarketDataRequest_SubscribeLastPriceRequest{
-				SubscribeLastPriceRequest: &api.SubscribeLastPriceRequest{
+			Payload: &api.MarketDataRequest_SubscribeCandlesRequest{
+				SubscribeCandlesRequest: &api.SubscribeCandlesRequest{
 					SubscriptionAction: api.SubscriptionAction_SUBSCRIPTION_ACTION_SUBSCRIBE,
-					Instruments: []*api.LastPriceInstrument{
-						{Figi: figi},
+					Instruments: []*api.CandleInstrument{
+						{
+							Figi:     figi,
+							Interval: interval,
+						},
 					},
 				},
 			},
@@ -54,10 +47,10 @@ func (s *SDK) UnsubscribeMarketData(figi string, consumer *TickerPriceConsumerIn
 
 	if len(consumers) == 0 {
 		unsubscribeRequest := api.MarketDataRequest{
-			Payload: &api.MarketDataRequest_SubscribeLastPriceRequest{
-				SubscribeLastPriceRequest: &api.SubscribeLastPriceRequest{
+			Payload: &api.MarketDataRequest_SubscribeCandlesRequest{
+				SubscribeCandlesRequest: &api.SubscribeCandlesRequest{
 					SubscriptionAction: api.SubscriptionAction_SUBSCRIPTION_ACTION_UNSUBSCRIBE,
-					Instruments: []*api.LastPriceInstrument{
+					Instruments: []*api.CandleInstrument{
 						{Figi: figi},
 					},
 				},
