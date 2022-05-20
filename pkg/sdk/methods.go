@@ -282,11 +282,11 @@ func (s *SDK) GetPortfolio(accountId string) (*api.PortfolioResponse, string, er
 }
 
 func (s *SDK) RealMarketBuy(figi string, quantity int64, accountId string, orderId string) (*api.PostOrderResponse, string, error) {
-	return s.postSandboxMarketOrder(figi, quantity, api.OrderDirection_ORDER_DIRECTION_BUY, accountId, orderId)
+	return s.postMarketOrder(figi, quantity, api.OrderDirection_ORDER_DIRECTION_BUY, accountId, orderId)
 }
 
 func (s *SDK) RealMarketSell(figi string, quantity int64, accountId string, orderId string) (*api.PostOrderResponse, string, error) {
-	return s.postSandboxMarketOrder(figi, quantity, api.OrderDirection_ORDER_DIRECTION_SELL, accountId, orderId)
+	return s.postMarketOrder(figi, quantity, api.OrderDirection_ORDER_DIRECTION_SELL, accountId, orderId)
 }
 
 func (s *SDK) postMarketOrder(figi string, quantity int64, direction api.OrderDirection, accountId string, orderId string) (*api.PostOrderResponse, string, error) {
