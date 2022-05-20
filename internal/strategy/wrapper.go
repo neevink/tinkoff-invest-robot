@@ -45,7 +45,17 @@ func (w Wrapper) Consume(data *investapi.MarketDataResponse) {
 		return
 	}
 
-	op := w.Step(CandleToCandle(data.GetCandle(), sdk.IntervalToDuration(w.tradingConfig.StrategyConfig.Interval)))
+	if data.GetCandle().Figi != w.tradingConfig.Figi {
+		return
+	}
+
+	op := w.Step(
+		CandleToCandle(
+			data.GetCandle(),
+			sdk.IntervalToDuration(w.tradingConfig.StrategyConfig.Interval),
+		),
+	)
+
 	// TODO тут можно сократить текст на много
 	switch op {
 	case Buy:
