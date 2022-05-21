@@ -29,7 +29,7 @@ type SDK struct {
 
 	marketDataStreamClient api.MarketDataStreamService_MarketDataStreamClient
 
-	marketDataConsumers map[string][]*TickerPriceConsumerInterface
+	candlesConsumers map[string][]*MarketDataConsumer
 }
 
 func New(address string, token string, appName string, ctx context.Context) (*SDK, error) {
@@ -66,24 +66,29 @@ func New(address string, token string, appName string, ctx context.Context) (*SD
 
 		marketDataStreamClient: stream,
 
-		marketDataConsumers: make(map[string][]*TickerPriceConsumerInterface, 0),
+		candlesConsumers: make(map[string][]*MarketDataConsumer, 0),
 	}, nil
 }
 
 func (s *SDK) Run() {
 	go func() {
 		for {
-			in, err := s.marketDataStreamClient.Recv()
+			newMessage, err := s.marketDataStreamClient.Recv()
 			if err == io.EOF {
-				log.Fatalf("Data stream closed")
+				log.Fatalf("Data stream closed. No more data.")
 				return
 			}
 			if err != nil {
-				log.Fatalf("Failed to receive a message : %v", err)
+				log.Fatalf("Failed to receive new message : %v", err)
 			}
-			for _, consumers := range s.marketDataConsumers {
-				for _, c := range consumers {
-					(*c).Consume(in)
+
+			if newMessage != nil && newMessage.GetCandle() != nil { // notify candles subscribers
+				figi := newMessage.GetCandle().GetFigi()
+				figiConsumers, contains := s.candlesConsumers[figi]
+				if contains {
+					for _, consumer := range figiConsumers {
+						(*consumer).Consume(newMessage)
+					}
 				}
 			}
 		}

@@ -15,8 +15,9 @@ import (
 type investRobot struct {
 	robotConfig     *config.RobotConfig
 	tradingConfig   *config.TradingConfig
-	tradingStrategy *strategy.Wrapper
+	tradingStrategy *strategy.CandlesStrategyProcessor
 	logger          *zap.Logger
+	sdk             *sdk.SDK
 
 	restartDelay time.Duration
 }
@@ -32,8 +33,9 @@ func New(conf *config.RobotConfig, tradingConfig *config.TradingConfig, sdk *sdk
 		tradingConfig:   tradingConfig,
 		tradingStrategy: tradingStrategy,
 		logger:          logger,
+		sdk:             sdk,
 
-		restartDelay: 5 * time.Second,
+		restartDelay: 10 * time.Second,
 	}, nil
 }
 
@@ -62,7 +64,15 @@ func (r *investRobot) Run() {
 }
 
 func (r *investRobot) run() error {
-	err := (*r.tradingStrategy).Start()
+	canTrade, _, err := r.sdk.CanTradeNow(r.tradingConfig.Exchange)
+	if err != nil {
+		return xerrors.Errorf("can't receive trading schedules: %w", err)
+	}
+	if !canTrade {
+		return xerrors.Errorf("instrument %s is not available, exchange is closed", r.tradingConfig.Ticker)
+	}
+
+	err = (*r.tradingStrategy).Start()
 	if err != nil {
 		return xerrors.Errorf("can't start robot trading strategy, %v", err)
 	}

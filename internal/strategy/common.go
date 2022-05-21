@@ -18,7 +18,7 @@ const (
 	Hold
 )
 
-func FromConfig(tradingConfig *config.TradingConfig, s *sdk.SDK, logger *zap.Logger) (*Wrapper, error) {
+func FromConfig(tradingConfig *config.TradingConfig, s *sdk.SDK, logger *zap.Logger) (*CandlesStrategyProcessor, error) {
 	f := rule_strategy.List[tradingConfig.StrategyConfig.Name]
 	if f == nil {
 		return nil, xerrors.Errorf("no ruleStrategy with name %s", tradingConfig.StrategyConfig.Name)
@@ -27,7 +27,7 @@ func FromConfig(tradingConfig *config.TradingConfig, s *sdk.SDK, logger *zap.Log
 	tradingRecord := techan.NewTradingRecord() // создание структуры стратегии и истории трейдинга
 	ruleStrategy, timeSeries := f(*tradingConfig)
 
-	tradingStrategy := Wrapper{
+	tradingStrategy := CandlesStrategyProcessor{
 		tradingConfig: tradingConfig,
 		sdk:           s,
 		logger:        logger,

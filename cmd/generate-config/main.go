@@ -153,7 +153,7 @@ func main() {
 			input = utils.RequestString("🛍 Введите тикеры акций для торговли (через пробел)", scanner)
 		}
 		inputTickers := strings.Split(input, " ")
-	TickerLoop:
+	tickerLoop:
 		for _, inputTicker := range inputTickers {
 			for _, share := range responseShares {
 				if share.GetTicker() == strings.ToUpper(inputTicker) {
@@ -171,7 +171,7 @@ func main() {
 						isTryAgain = true
 					}
 					color.Green("Торговая конфигурация %s успешно записана", filename)
-					continue TickerLoop
+					continue tickerLoop
 				}
 			}
 			color.Yellow("Инструмент с тикером \"%s\" не найден!", inputTicker)

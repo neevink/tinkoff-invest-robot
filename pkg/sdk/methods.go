@@ -10,29 +10,6 @@ import (
 	api "tinkoff-invest-bot/investapi"
 )
 
-// GetTradingSchedules Получает расписание торгов на указанную дату
-func (s *SDK) GetTradingSchedules(time time.Time) ([]*api.TradingSchedule, string, error) {
-	var header, trailer metadata.MD
-
-	resp, err := s.instruments.TradingSchedules(
-		s.ctx, &api.TradingSchedulesRequest{
-			From: timestamppb.New(time),
-			To:   timestamppb.New(time),
-		},
-		grpc.Header(&header),
-		grpc.Trailer(&trailer),
-	)
-	trackingId := extractTrackingId(&header, &trailer)
-
-	if err != nil {
-		if extractedError := extractRequestError(&trailer); extractedError != nil {
-			return nil, trackingId, extractedError
-		}
-		return nil, trackingId, err
-	}
-	return resp.GetExchanges(), trackingId, nil
-}
-
 func (s *SDK) GetShares() ([]*api.Share, string, error) {
 	var header, trailer metadata.MD
 	r, err := s.instruments.Shares(

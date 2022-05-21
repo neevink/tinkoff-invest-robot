@@ -14,7 +14,8 @@ import (
 
 type FinishEvent struct{}
 
-type Wrapper struct {
+// CandlesStrategyProcessor запускалка всех стратегий, работа которых основана на свечках
+type CandlesStrategyProcessor struct {
 	tradingConfig *config.TradingConfig
 	sdk           *sdk.SDK
 	logger        *zap.Logger
@@ -26,7 +27,7 @@ type Wrapper struct {
 	blockChannel chan FinishEvent
 }
 
-func (w Wrapper) Step(candle *techan.Candle) Operation {
+func (w CandlesStrategyProcessor) Step(candle *techan.Candle) Operation {
 	if w.TimeSeries.AddCandle(candle) {
 		fmt.Printf("%v %s: %f\n", w.TimeSeries.LastIndex(), w.tradingConfig.Ticker, candle.ClosePrice.Float())
 	} // добавляем пришедшую свечу (неважно откуда)
@@ -40,19 +41,7 @@ func (w Wrapper) Step(candle *techan.Candle) Operation {
 	}
 }
 
-func (w Wrapper) Consume(data *investapi.MarketDataResponse) {
-	if data == nil {
-		return
-	}
-
-	if data.GetCandle() == nil {
-		return
-	}
-
-	if data.GetCandle().Figi != w.tradingConfig.Figi {
-		return
-	}
-
+func (w CandlesStrategyProcessor) Consume(data *investapi.MarketDataResponse) {
 	op := w.Step(
 		CandleToCandle(
 			data.GetCandle(),
@@ -60,7 +49,6 @@ func (w Wrapper) Consume(data *investapi.MarketDataResponse) {
 		),
 	)
 
-	// TODO тут можно сократить текст на много
 	switch op {
 	case Buy:
 		orderId := sdk.GenerateOrderId()
@@ -181,9 +169,9 @@ func (w Wrapper) Consume(data *investapi.MarketDataResponse) {
 	}
 }
 
-func (w Wrapper) Start() error {
-	var cons sdk.TickerPriceConsumerInterface = w
-	err := w.sdk.SubscribeMarketData(w.tradingConfig.Figi, sdk.IntervalToSubscriptionInterval(w.tradingConfig.StrategyConfig.Interval), &cons)
+func (w CandlesStrategyProcessor) Start() error {
+	var cons sdk.MarketDataConsumer = w
+	err := w.sdk.SubscribeCandles(w.tradingConfig.Figi, sdk.IntervalToSubscriptionInterval(w.tradingConfig.StrategyConfig.Interval), &cons)
 	if err != nil {
 		return err
 	}
@@ -197,9 +185,9 @@ func (w Wrapper) Start() error {
 	return nil
 }
 
-func (w Wrapper) Stop() error {
-	var cons sdk.TickerPriceConsumerInterface = w
-	if err := w.sdk.UnsubscribeMarketData(w.tradingConfig.Figi, &cons); err != nil {
+func (w CandlesStrategyProcessor) Stop() error {
+	var cons sdk.MarketDataConsumer = w
+	if err := w.sdk.UnsubscribeCandles(w.tradingConfig.Figi, &cons); err != nil {
 		return err
 	}
 	w.logger.Info(
@@ -210,6 +198,6 @@ func (w Wrapper) Stop() error {
 	return nil
 }
 
-func (w *Wrapper) BlockUntilEnd() {
+func (w *CandlesStrategyProcessor) BlockUntilEnd() {
 	<-w.blockChannel
 }
