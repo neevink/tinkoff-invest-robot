@@ -163,6 +163,7 @@ func main() {
 						Ticker:         share.GetTicker(),
 						Figi:           share.GetFigi(),
 						Exchange:       share.GetExchange(),
+						Currency:       share.GetCurrency(),
 						StrategyConfig: strategyConfig,
 					}
 					filename := share.GetTicker() + "_" + account.GetId() + ".yaml"

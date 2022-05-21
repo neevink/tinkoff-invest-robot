@@ -29,7 +29,7 @@ type CandlesStrategyProcessor struct {
 
 func (w CandlesStrategyProcessor) Step(candle *techan.Candle) Operation {
 	if w.TimeSeries.AddCandle(candle) {
-		fmt.Printf("%v %s: %f\n", w.TimeSeries.LastIndex(), w.tradingConfig.Ticker, candle.ClosePrice.Float())
+		fmt.Printf("Added candle %v for %s: %f\n", w.TimeSeries.LastIndex(), w.tradingConfig.Ticker, candle.ClosePrice.Float())
 	} // добавляем пришедшую свечу (неважно откуда)
 
 	if w.ruleStrategy.ShouldEnter(w.TimeSeries.LastIndex(), w.TradingRecord) {
@@ -51,121 +51,193 @@ func (w CandlesStrategyProcessor) Consume(data *investapi.MarketDataResponse) {
 
 	switch op {
 	case Buy:
-		orderId := sdk.GenerateOrderId()
-
-		var resp *investapi.PostOrderResponse
-		var trackingId string
-		var err error
-		if w.tradingConfig.IsSandbox {
-			resp, trackingId, err = w.sdk.SandboxMarketBuy(
-				w.tradingConfig.Figi,
-				w.tradingConfig.StrategyConfig.Quantity,
-				w.tradingConfig.AccountId,
-				orderId,
-			)
-		} else {
-			resp, trackingId, err = w.sdk.RealMarketBuy(
-				w.tradingConfig.Figi,
-				w.tradingConfig.StrategyConfig.Quantity,
-				w.tradingConfig.AccountId,
-				orderId,
-			)
-		}
-
+		isEnough, trackingId, err := w.sdk.IsEnoughMoneyToBuy(
+			w.tradingConfig.AccountId,
+			w.tradingConfig.IsSandbox,
+			w.tradingConfig.Figi,
+			w.tradingConfig.Currency,
+			w.tradingConfig.StrategyConfig.Quantity,
+		)
 		if err != nil {
 			w.logger.Info(
-				"Can't Buy share",
+				"Can't check available to buy share",
 				zap.String("accountId", w.tradingConfig.AccountId),
 				zap.String("figi", w.tradingConfig.Figi),
 				zap.String("ticker", w.tradingConfig.Ticker),
-				zap.Float64("price", sdk.MoneyValueToFloat(resp.GetInitialOrderPrice())),
-				zap.Int("candleNo", w.TimeSeries.LastIndex()),
 				zap.String("ruleStrategy", w.tradingConfig.StrategyConfig.Name),
-				zap.String("orderId", orderId),
 				zap.String("trackingId", trackingId),
 				zap.Error(err),
 			)
-		} else {
-			w.TradingRecord.Operate(techan.Order{
-				Side:          techan.OrderSide(op),
-				Security:      orderId,
-				Price:         big.NewDecimal(sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
-				Amount:        big.NewDecimal(sdk.MoneyValueToFloat(resp.GetTotalOrderAmount())),
-				ExecutionTime: w.TimeSeries.LastCandle().Period.End,
-			})
+		}
 
+		if isEnough {
+			w.buy()
+		} else {
 			w.logger.Info(
-				"Buy new share",
+				"Can't buy share because not enough money",
 				zap.String("accountId", w.tradingConfig.AccountId),
 				zap.String("figi", w.tradingConfig.Figi),
 				zap.String("ticker", w.tradingConfig.Ticker),
-				zap.Float64("price", sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
-				zap.Int("candleNo", w.TimeSeries.LastIndex()),
 				zap.String("ruleStrategy", w.tradingConfig.StrategyConfig.Name),
-				zap.String("orderId", orderId),
 				zap.String("trackingId", trackingId),
 			)
 		}
+
 	case Sell:
-		orderId := sdk.GenerateOrderId()
-
-		var resp *investapi.PostOrderResponse
-		var trackingId string
-		var err error
-		if w.tradingConfig.IsSandbox {
-			resp, trackingId, err = w.sdk.SandboxMarketSell(
-				w.tradingConfig.Figi,
-				w.tradingConfig.StrategyConfig.Quantity,
-				w.tradingConfig.AccountId,
-				orderId,
-			)
-		} else {
-			resp, trackingId, err = w.sdk.RealMarketSell(
-				w.tradingConfig.Figi,
-				w.tradingConfig.StrategyConfig.Quantity,
-				w.tradingConfig.AccountId,
-				orderId,
-			)
-		}
-
+		isAvailable, trackingId, err := w.sdk.IsEnoughMoneyToBuy(
+			w.tradingConfig.AccountId,
+			w.tradingConfig.IsSandbox,
+			w.tradingConfig.Figi,
+			w.tradingConfig.Currency,
+			w.tradingConfig.StrategyConfig.Quantity,
+		)
 		if err != nil {
 			w.logger.Info(
-				"Can't sell new share",
+				"Can't check available to sell share",
 				zap.String("accountId", w.tradingConfig.AccountId),
 				zap.String("figi", w.tradingConfig.Figi),
 				zap.String("ticker", w.tradingConfig.Ticker),
-				zap.Float64("price", sdk.MoneyValueToFloat(resp.GetInitialOrderPrice())),
-				zap.Int("candleNo", w.TimeSeries.LastIndex()),
 				zap.String("ruleStrategy", w.tradingConfig.StrategyConfig.Name),
-				zap.String("orderId", orderId),
 				zap.String("trackingId", trackingId),
 				zap.Error(err),
 			)
-		} else {
-			w.TradingRecord.Operate(techan.Order{
-				Side:          techan.OrderSide(op),
-				Security:      orderId,
-				Price:         big.NewDecimal(sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
-				Amount:        big.NewDecimal(sdk.MoneyValueToFloat(resp.GetTotalOrderAmount())),
-				ExecutionTime: w.TimeSeries.LastCandle().Period.End,
-			})
+		}
 
+		if isAvailable {
+			w.sell()
+		} else {
 			w.logger.Info(
-				"Sell share",
+				"Can't sell share because not enough quantity of shares",
 				zap.String("accountId", w.tradingConfig.AccountId),
 				zap.String("figi", w.tradingConfig.Figi),
 				zap.String("ticker", w.tradingConfig.Ticker),
-				zap.Float64("price", sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
-				zap.Int("candleNo", w.TimeSeries.LastIndex()),
-				zap.Float64("income", w.TradingRecord.LastTrade().ExitOrder().Amount.Sub(w.TradingRecord.LastTrade().EntranceOrder().Amount).Float()),
 				zap.String("ruleStrategy", w.tradingConfig.StrategyConfig.Name),
-				zap.String("orderId", orderId),
 				zap.String("trackingId", trackingId),
 			)
-			// w.blockChannel <- FinishEvent{}
 		}
 	case Hold:
 	default:
+	}
+}
+
+func (w CandlesStrategyProcessor) buy() {
+	orderId := sdk.GenerateOrderId()
+
+	var resp *investapi.PostOrderResponse
+	var trackingId string
+	var err error
+
+	if w.tradingConfig.IsSandbox {
+		resp, trackingId, err = w.sdk.SandboxMarketBuy(
+			w.tradingConfig.Figi,
+			w.tradingConfig.StrategyConfig.Quantity,
+			w.tradingConfig.AccountId,
+			orderId,
+		)
+	} else {
+		resp, trackingId, err = w.sdk.RealMarketBuy(
+			w.tradingConfig.Figi,
+			w.tradingConfig.StrategyConfig.Quantity,
+			w.tradingConfig.AccountId,
+			orderId,
+		)
+	}
+
+	// TODO in future add check that share is real bought
+	if resp.ExecutionReportStatus != investapi.OrderExecutionReportStatus_EXECUTION_REPORT_STATUS_FILL {
+
+	}
+
+	if err != nil {
+		w.logger.Info(
+			"Can't Buy share",
+			zap.String("accountId", w.tradingConfig.AccountId),
+			zap.String("figi", w.tradingConfig.Figi),
+			zap.String("ticker", w.tradingConfig.Ticker),
+			zap.Float64("price", sdk.MoneyValueToFloat(resp.GetInitialOrderPrice())),
+			zap.String("ruleStrategy", w.tradingConfig.StrategyConfig.Name),
+			zap.String("orderId", orderId),
+			zap.String("trackingId", trackingId),
+			zap.Error(err),
+		)
+	} else {
+		w.TradingRecord.Operate(techan.Order{
+			Side:          techan.OrderSide(Buy),
+			Security:      orderId,
+			Price:         big.NewDecimal(sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
+			Amount:        big.NewDecimal(sdk.MoneyValueToFloat(resp.GetTotalOrderAmount())),
+			ExecutionTime: w.TimeSeries.LastCandle().Period.End,
+		})
+
+		w.logger.Info(
+			"Buy new share",
+			zap.String("accountId", w.tradingConfig.AccountId),
+			zap.String("figi", w.tradingConfig.Figi),
+			zap.String("ticker", w.tradingConfig.Ticker),
+			zap.Float64("price", sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
+			zap.String("ruleStrategy", w.tradingConfig.StrategyConfig.Name),
+			zap.String("orderId", orderId),
+			zap.String("trackingId", trackingId),
+		)
+	}
+}
+
+func (w CandlesStrategyProcessor) sell() {
+	orderId := sdk.GenerateOrderId()
+
+	var resp *investapi.PostOrderResponse
+	var trackingId string
+	var err error
+
+	if w.tradingConfig.IsSandbox {
+		resp, trackingId, err = w.sdk.SandboxMarketSell(
+			w.tradingConfig.Figi,
+			w.tradingConfig.StrategyConfig.Quantity,
+			w.tradingConfig.AccountId,
+			orderId,
+		)
+	} else {
+		resp, trackingId, err = w.sdk.RealMarketSell(
+			w.tradingConfig.Figi,
+			w.tradingConfig.StrategyConfig.Quantity,
+			w.tradingConfig.AccountId,
+			orderId,
+		)
+	}
+
+	if err != nil {
+		w.logger.Info(
+			"Can't sell new share",
+			zap.String("accountId", w.tradingConfig.AccountId),
+			zap.String("figi", w.tradingConfig.Figi),
+			zap.String("ticker", w.tradingConfig.Ticker),
+			zap.Float64("price", sdk.MoneyValueToFloat(resp.GetInitialOrderPrice())),
+			zap.String("ruleStrategy", w.tradingConfig.StrategyConfig.Name),
+			zap.String("orderId", orderId),
+			zap.String("trackingId", trackingId),
+			zap.Error(err),
+		)
+	} else {
+		w.TradingRecord.Operate(techan.Order{
+			Side:          techan.OrderSide(Sell),
+			Security:      orderId,
+			Price:         big.NewDecimal(sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
+			Amount:        big.NewDecimal(sdk.MoneyValueToFloat(resp.GetTotalOrderAmount())),
+			ExecutionTime: w.TimeSeries.LastCandle().Period.End,
+		})
+
+		w.logger.Info(
+			"Sell share",
+			zap.String("accountId", w.tradingConfig.AccountId),
+			zap.String("figi", w.tradingConfig.Figi),
+			zap.String("ticker", w.tradingConfig.Ticker),
+			zap.Float64("price", sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
+			zap.Float64("income", w.TradingRecord.LastTrade().ExitOrder().Amount.Sub(w.TradingRecord.LastTrade().EntranceOrder().Amount).Float()),
+			zap.String("ruleStrategy", w.tradingConfig.StrategyConfig.Name),
+			zap.String("orderId", orderId),
+			zap.String("trackingId", trackingId),
+		)
+		// w.blockChannel <- FinishEvent{}
 	}
 }
 
