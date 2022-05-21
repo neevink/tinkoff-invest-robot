@@ -145,7 +145,7 @@ func (w CandlesStrategyProcessor) buy() {
 
 	// TODO in future add check that share is real bought
 	if resp.ExecutionReportStatus != investapi.OrderExecutionReportStatus_EXECUTION_REPORT_STATUS_FILL {
-
+		fmt.Printf("")
 	}
 
 	if err != nil {
