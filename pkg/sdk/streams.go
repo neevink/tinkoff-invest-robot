@@ -6,8 +6,9 @@ import (
 	api "tinkoff-invest-bot/investapi"
 )
 
-func (s *SDK) SubscribeMarketData(figi string, interval api.SubscriptionInterval, consumer *TickerPriceConsumerInterface) error {
-	consumers, contains := s.marketDataConsumers[figi]
+// SubscribeCandles Подписать консьюмера на информацию о новых свечах
+func (s *SDK) SubscribeCandles(figi string, interval api.SubscriptionInterval, consumer *MarketDataConsumer) error {
+	consumers, contains := s.candlesConsumers[figi]
 	if !contains {
 		subscribeRequest := api.MarketDataRequest{
 			Payload: &api.MarketDataRequest_SubscribeCandlesRequest{
@@ -25,22 +26,23 @@ func (s *SDK) SubscribeMarketData(figi string, interval api.SubscriptionInterval
 		if err := s.marketDataStreamClient.Send(&subscribeRequest); err != nil {
 			return err
 		}
-		s.marketDataConsumers[figi] = make([]*TickerPriceConsumerInterface, 0)
+		s.candlesConsumers[figi] = make([]*MarketDataConsumer, 0)
 	}
 
-	s.marketDataConsumers[figi] = append(consumers, consumer)
+	s.candlesConsumers[figi] = append(consumers, consumer)
 	return nil
 }
 
-func (s *SDK) UnsubscribeMarketData(figi string, consumer *TickerPriceConsumerInterface) error {
-	consumers, contains := s.marketDataConsumers[figi]
+// UnsubscribeCandles Отписать консьюмера от информацию о новых свечах
+func (s *SDK) UnsubscribeCandles(figi string, consumer *MarketDataConsumer) error {
+	consumers, contains := s.candlesConsumers[figi]
 	if !contains {
 		return xerrors.Errorf("no such consumer subscribed on figi %s", figi)
 	}
 
 	for i, c := range consumers {
 		if c == consumer {
-			s.marketDataConsumers[figi] = append(consumers[:i], consumers[i+1:]...)
+			s.candlesConsumers[figi] = append(consumers[:i], consumers[i+1:]...)
 			break
 		}
 	}
@@ -60,8 +62,7 @@ func (s *SDK) UnsubscribeMarketData(figi string, consumer *TickerPriceConsumerIn
 		if err != nil {
 			return err
 		}
-		// add unsubscribe grpc request
-		delete(s.marketDataConsumers, figi)
+		delete(s.candlesConsumers, figi)
 	}
 	return nil
 }

@@ -65,7 +65,7 @@ func (s *SDK) postSandboxMarketOrder(figi string, quantity int64, direction api.
 	return resp, trackingId, nil
 }
 
-// GetSandboxPositions Получает все активные позиции аккаунта
+// GetSandboxPositions Получает все активные позиции Sandbox аккаунта
 func (s *SDK) GetSandboxPositions(accountId string) (*api.PositionsResponse, string, error) {
 	var header, trailer metadata.MD
 	resp, err := s.sandbox.GetSandboxPositions(

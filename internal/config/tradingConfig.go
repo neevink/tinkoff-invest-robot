@@ -25,6 +25,7 @@ type TradingConfig struct {
 	Ticker         string         `yaml:"ticker"`
 	Figi           string         `yaml:"figi"`
 	Exchange       string         `yaml:"exchange"`
+	Currency       string         `yaml:"currency"`
 	StrategyConfig StrategyConfig `yaml:"strategy"`
 }
 
