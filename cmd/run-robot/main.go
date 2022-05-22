@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"sync"
 
 	"go.uber.org/zap"
 
 	"tinkoff-invest-bot/internal/config"
 	"tinkoff-invest-bot/internal/engine"
+	"tinkoff-invest-bot/pkg/graphics"
 	"tinkoff-invest-bot/pkg/sdk"
 )
 
@@ -44,9 +46,11 @@ func main() {
 
 	s, err := sdk.New(robotConfig.TinkoffApiEndpoint, robotConfig.TinkoffAccessToken, robotConfig.AppName, ctx)
 	if err != nil {
-		logger.Fatal("Can't init sdk", zap.Error(err))
+		logger.Fatal("Can't init SDK", zap.Error(err))
 	}
 	s.Run()
+
+	go serveGraphics(8080, logger)
 
 	var wg sync.WaitGroup
 	for _, conf := range tradingConfigs {
@@ -61,4 +65,15 @@ func main() {
 		}()
 	}
 	wg.Wait()
+}
+
+func serveGraphics(port int, logger *zap.Logger) {
+	for {
+		http.Handle("/", graphics.NewGraphHandler(logger))
+		fmt.Printf("http server listen http://localhost:%d/\n", port)
+		err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+		if err != nil {
+			logger.Error("Error in http server", zap.Error(err))
+		}
+	}
 }

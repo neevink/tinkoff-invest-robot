@@ -130,5 +130,8 @@ func main() {
 		income += res
 	}
 	fmt.Println("income:", income)
-	strategyWrapper.GenGraph(graphsPath, tradingConfig.Ticker+"_"+tradingConfig.AccountId+".html")
+	path := tradingConfig.Ticker + "_" + tradingConfig.AccountId + ".html"
+	strategyWrapper.GenGraph(graphsPath, path)
+	p, _ := os.Getwd()
+	fmt.Printf("График успешно сгенерирован, посмотреть его можно тут: file://%s", p+"/graphs/"+path)
 }

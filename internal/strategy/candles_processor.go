@@ -2,8 +2,8 @@ package strategy
 
 import (
 	"fmt"
-	"github.com/iamjinlei/go-tachart/tachart"
 
+	"github.com/iamjinlei/go-tachart/tachart"
 	"github.com/sdcoffey/big"
 	"github.com/sdcoffey/techan"
 	"go.uber.org/zap"
@@ -11,6 +11,10 @@ import (
 	"tinkoff-invest-bot/internal/config"
 	"tinkoff-invest-bot/investapi"
 	"tinkoff-invest-bot/pkg/sdk"
+)
+
+const (
+	graphDirName string = "./graphs/"
 )
 
 type FinishEvent struct{}
@@ -34,7 +38,7 @@ type CandlesStrategyProcessor struct {
 func (w CandlesStrategyProcessor) GenGraph(dirname string, filename string) {
 	err := config.CreateDirIfNotExist(dirname)
 	if err != nil {
-		w.logger.Info("Cant create dir")
+		w.logger.Info("Can't create dir")
 	}
 	cfg := tachart.NewConfig().
 		SetChartWidth(1080).
@@ -43,7 +47,7 @@ func (w CandlesStrategyProcessor) GenGraph(dirname string, filename string) {
 	c := tachart.New(*cfg)
 	err = c.GenStatic(w.candles, w.events, dirname+filename)
 	if err != nil {
-		w.logger.Info("Cant gen graph")
+		w.logger.Info("Can't gen graph")
 	}
 }
 
@@ -81,6 +85,7 @@ func (w *CandlesStrategyProcessor) Step(candle *techan.Candle) Operation {
 			V:     candle.Volume.Float(),
 		})
 		fmt.Printf("Added candle %v for %s: %f\n", w.timeSeries.LastIndex(), w.tradingConfig.Ticker, candle.ClosePrice.Float())
+		go w.GenGraph(graphDirName, w.tradingConfig.Ticker+"_"+w.tradingConfig.AccountId+".html")
 	} // добавляем пришедшую свечу (неважно откуда)
 
 	if w.ruleStrategy.ShouldEnter(w.timeSeries.LastIndex(), w.TradingRecord) {
