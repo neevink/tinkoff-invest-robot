@@ -2,6 +2,7 @@ package strategy
 
 import (
 	"fmt"
+	"github.com/iamjinlei/go-tachart/tachart"
 
 	"github.com/sdcoffey/big"
 	"github.com/sdcoffey/techan"
@@ -20,21 +21,71 @@ type CandlesStrategyProcessor struct {
 	sdk           *sdk.SDK
 	logger        *zap.Logger
 
-	TimeSeries    *techan.TimeSeries
+	timeSeries    *techan.TimeSeries
 	TradingRecord *techan.TradingRecord
 	ruleStrategy  *techan.RuleStrategy
+
+	candles []tachart.Candle
+	events  []tachart.Event
 
 	blockChannel chan FinishEvent
 }
 
-func (w CandlesStrategyProcessor) Step(candle *techan.Candle) Operation {
-	if w.TimeSeries.AddCandle(candle) {
-		fmt.Printf("Added candle %v for %s: %f\n", w.TimeSeries.LastIndex(), w.tradingConfig.Ticker, candle.ClosePrice.Float())
+func (w CandlesStrategyProcessor) GenGraph(dirname string, filename string) {
+	err := config.CreateDirIfNotExist(dirname)
+	if err != nil {
+		w.logger.Info("Cant create dir")
+	}
+	cfg := tachart.NewConfig().
+		SetChartWidth(1080).
+		SetChartHeight(800).AddOverlay(tachart.NewSMA(100))
+
+	c := tachart.New(*cfg)
+	err = c.GenStatic(w.candles, w.events, dirname+filename)
+	if err != nil {
+		w.logger.Info("Cant gen graph")
+	}
+}
+
+func (w *CandlesStrategyProcessor) AddEvent(op Operation, orderId string, executedPrice float64, totalAmount float64) {
+	var eventType tachart.EventType
+	switch op {
+	case Buy:
+		eventType = tachart.Open
+	case Sell:
+		eventType = tachart.Close
+	case Hold:
+	default:
+	}
+	w.events = append(w.events, tachart.Event{
+		Type:  eventType,
+		Label: w.candles[len(w.candles)-1].Label,
+	})
+	w.TradingRecord.Operate(techan.Order{
+		Side:          techan.OrderSide(op),
+		Security:      orderId,
+		Price:         big.NewDecimal(executedPrice),
+		Amount:        big.NewDecimal(totalAmount),
+		ExecutionTime: w.timeSeries.LastCandle().Period.End,
+	})
+}
+
+func (w *CandlesStrategyProcessor) Step(candle *techan.Candle) Operation {
+	if w.timeSeries.AddCandle(candle) {
+		w.candles = append(w.candles, tachart.Candle{
+			Label: candle.Period.Start.Format("02.01/15:04"),
+			O:     candle.OpenPrice.Float(),
+			H:     candle.MaxPrice.Float(),
+			L:     candle.MinPrice.Float(),
+			C:     candle.ClosePrice.Float(),
+			V:     candle.Volume.Float(),
+		})
+		fmt.Printf("Added candle %v for %s: %f\n", w.timeSeries.LastIndex(), w.tradingConfig.Ticker, candle.ClosePrice.Float())
 	} // добавляем пришедшую свечу (неважно откуда)
 
-	if w.ruleStrategy.ShouldEnter(w.TimeSeries.LastIndex(), w.TradingRecord) {
+	if w.ruleStrategy.ShouldEnter(w.timeSeries.LastIndex(), w.TradingRecord) {
 		return Buy
-	} else if w.ruleStrategy.ShouldExit(w.TimeSeries.LastIndex(), w.TradingRecord) {
+	} else if w.ruleStrategy.ShouldExit(w.timeSeries.LastIndex(), w.TradingRecord) {
 		return Sell
 	} else {
 		return Hold
@@ -161,13 +212,7 @@ func (w CandlesStrategyProcessor) buy() {
 			zap.Error(err),
 		)
 	} else {
-		w.TradingRecord.Operate(techan.Order{
-			Side:          techan.OrderSide(Buy),
-			Security:      orderId,
-			Price:         big.NewDecimal(sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
-			Amount:        big.NewDecimal(sdk.MoneyValueToFloat(resp.GetTotalOrderAmount())),
-			ExecutionTime: w.TimeSeries.LastCandle().Period.End,
-		})
+		w.AddEvent(Buy, orderId, sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice()), sdk.MoneyValueToFloat(resp.GetTotalOrderAmount()))
 
 		w.logger.Info(
 			"Buy new share",
@@ -218,13 +263,7 @@ func (w CandlesStrategyProcessor) sell() {
 			zap.Error(err),
 		)
 	} else {
-		w.TradingRecord.Operate(techan.Order{
-			Side:          techan.OrderSide(Sell),
-			Security:      orderId,
-			Price:         big.NewDecimal(sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
-			Amount:        big.NewDecimal(sdk.MoneyValueToFloat(resp.GetTotalOrderAmount())),
-			ExecutionTime: w.TimeSeries.LastCandle().Period.End,
-		})
+		w.AddEvent(Sell, orderId, sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice()), sdk.MoneyValueToFloat(resp.GetTotalOrderAmount()))
 
 		w.logger.Info(
 			"Sell share",

@@ -1,6 +1,7 @@
 package strategy
 
 import (
+	"github.com/iamjinlei/go-tachart/tachart"
 	"github.com/sdcoffey/techan"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
@@ -31,9 +32,11 @@ func FromConfig(tradingConfig *config.TradingConfig, s *sdk.SDK, logger *zap.Log
 		tradingConfig: tradingConfig,
 		sdk:           s,
 		logger:        logger,
-		TimeSeries:    timeSeries,
+		timeSeries:    timeSeries,
 		TradingRecord: tradingRecord,
 		ruleStrategy:  &ruleStrategy,
+		candles:       []tachart.Candle{},
+		events:        []tachart.Event{},
 	}
 
 	return &tradingStrategy, nil

@@ -11,6 +11,7 @@ run-robot
 strategy-backtest
 configs/generated/
 logs/
+graphs/
 
 # misc
 .env
