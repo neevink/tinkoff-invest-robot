@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/sdcoffey/big"
-	"github.com/sdcoffey/techan"
 	"go.uber.org/zap"
 
 	"tinkoff-invest-bot/internal/config"
@@ -22,6 +20,7 @@ import (
 
 const (
 	configsPath     = "./configs/generated/"
+	graphsPath      = "./graphs/"
 	robotConfigPath = "./configs/robot.yaml"
 )
 
@@ -92,7 +91,7 @@ func main() {
 		c, _, err := s.GetCandles(
 			tradingConfig.Figi,
 			from,
-			from.AddDate(0, 0, 1),
+			from.AddDate(0, 0, 1).Add(-time.Minute),
 			sdk.IntervalToCandleInterval(tradingConfig.StrategyConfig.Interval),
 		)
 		if err != nil {
@@ -106,19 +105,17 @@ func main() {
 	if err != nil {
 		log.Fatalf("Не удается инициализировать стратегию: %v", err)
 	}
-
+	if len(candles) == 0 {
+		log.Fatalf("За указанный период не было ни одной свечи")
+	}
 	for _, candle := range candles {
-		op := strategyWrapper.Step(strategy.HistoricCandleToCandle(candle, sdk.IntervalToDuration(tradingConfig.StrategyConfig.Interval)))
+		newCandle := strategy.HistoricCandleToCandle(candle, sdk.IntervalToDuration(tradingConfig.StrategyConfig.Interval))
+		op := strategyWrapper.Step(newCandle)
 		switch op {
 		case strategy.Buy:
-			fallthrough
+			strategyWrapper.AddEvent(strategy.Buy, "uid", sdk.QuotationToFloat(candle.Close), sdk.QuotationToFloat(candle.Close))
 		case strategy.Sell:
-			strategyWrapper.TradingRecord.Operate(techan.Order{
-				Side:          techan.OrderSide(op),
-				Price:         big.NewDecimal(sdk.QuotationToFloat(candle.Close)),
-				Amount:        big.NewFromInt(int(tradingConfig.StrategyConfig.Quantity)),
-				ExecutionTime: candle.Time.AsTime(),
-			})
+			strategyWrapper.AddEvent(strategy.Sell, "uid", sdk.QuotationToFloat(candle.Close), sdk.QuotationToFloat(candle.Close))
 		case strategy.Hold:
 			continue
 		default:
@@ -133,4 +130,5 @@ func main() {
 		income += res
 	}
 	fmt.Println("income:", income)
+	strategyWrapper.GenGraph(graphsPath, tradingConfig.Ticker+"_"+tradingConfig.AccountId+".html")
 }
