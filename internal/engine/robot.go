@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.uber.org/zap"
@@ -22,18 +23,28 @@ type investRobot struct {
 	restartDelay time.Duration
 }
 
-func New(conf *config.RobotConfig, tradingConfig *config.TradingConfig, sdk *sdk.SDK, logger *zap.Logger, ctx context.Context) (*investRobot, error) {
-	tradingStrategy, err := strategy.FromConfig(tradingConfig, sdk, logger)
+func New(conf *config.RobotConfig, tradingConfig *config.TradingConfig, s *sdk.SDK, logger *zap.Logger, ctx context.Context) (*investRobot, error) {
+	tradingStrategy, err := strategy.FromConfig(tradingConfig, s, logger)
+
+	c, _, err := s.GetCandles(
+		tradingConfig.Figi,
+		time.Now().AddDate(0, 0, -1),
+		time.Now(),
+		sdk.IntervalToCandleInterval(tradingConfig.StrategyConfig.Interval),
+	)
 	if err != nil {
 		return nil, err
 	}
+
+	tradingStrategy.Init(strategy.HistoricCandlesToTechanCandles(c, sdk.IntervalToDuration(tradingConfig.StrategyConfig.Interval)))
+	logger.Info(fmt.Sprintf("Initialization %s with %v candles", tradingConfig.Ticker, len(c)))
 
 	return &investRobot{
 		robotConfig:     conf,
 		tradingConfig:   tradingConfig,
 		tradingStrategy: tradingStrategy,
 		logger:          logger,
-		sdk:             sdk,
+		sdk:             s,
 
 		restartDelay: 10 * time.Second,
 	}, nil

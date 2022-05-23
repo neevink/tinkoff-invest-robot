@@ -10,7 +10,7 @@ import (
 	"tinkoff-invest-bot/pkg/sdk"
 )
 
-func HistoricCandleToCandle(c *investapi.HistoricCandle, period time.Duration) *techan.Candle {
+func HistoricCandleToTechanCandle(c *investapi.HistoricCandle, period time.Duration) *techan.Candle {
 	timePeriod := techan.NewTimePeriod(c.Time.AsTime(), period)
 	candle := techan.NewCandle(timePeriod)
 
@@ -22,7 +22,15 @@ func HistoricCandleToCandle(c *investapi.HistoricCandle, period time.Duration) *
 	return candle
 }
 
-func CandleToCandle(c *investapi.Candle, period time.Duration) *techan.Candle {
+func HistoricCandlesToTechanCandles(c []*investapi.HistoricCandle, period time.Duration) []*techan.Candle {
+	techanCandles := make([]*techan.Candle, len(c))
+	for i, candle := range c {
+		techanCandles[i] = HistoricCandleToTechanCandle(candle, period)
+	}
+	return techanCandles
+}
+
+func CandleToTechanCandle(c *investapi.Candle, period time.Duration) *techan.Candle {
 	timePeriod := techan.NewTimePeriod(c.Time.AsTime(), period)
 	candle := techan.NewCandle(timePeriod)
 
