@@ -56,8 +56,8 @@ func (w CandlesStrategyProcessor) GenGraph(dirname string, filename string) {
 		w.logger.Info("Can't create dir")
 	}
 	cfg := tachart.NewConfig().
-		SetChartWidth(1080).
-		SetChartHeight(800).AddOverlay(tachart.NewSMA(100))
+		SetChartWidth(1400).
+		SetChartHeight(800).AddOverlay(tachart.NewEMA(100))
 
 	c := tachart.New(*cfg)
 	err = c.GenStatic(w.candles, w.events, dirname+filename)
