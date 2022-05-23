@@ -25,6 +25,9 @@ type investRobot struct {
 
 func New(conf *config.RobotConfig, tradingConfig *config.TradingConfig, s *sdk.SDK, logger *zap.Logger, ctx context.Context) (*investRobot, error) {
 	tradingStrategy, err := strategy.FromConfig(tradingConfig, s, logger)
+	if err != nil {
+		return nil, err
+	}
 
 	c, _, err := s.GetCandles(
 		tradingConfig.Figi,
