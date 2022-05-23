@@ -110,7 +110,7 @@ func main() {
 	}
 	for _, candle := range candles {
 		newCandle := strategy.HistoricCandleToTechanCandle(candle, sdk.IntervalToDuration(tradingConfig.StrategyConfig.Interval))
-		op := strategyWrapper.Step(newCandle)
+		op := strategyWrapper.Step(newCandle, false)
 		switch op {
 		case strategy.Buy:
 			strategyWrapper.AddEvent(strategy.Buy, "uid", sdk.QuotationToFloat(candle.Close), sdk.QuotationToFloat(candle.Close))

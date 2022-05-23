@@ -55,7 +55,7 @@ func main() {
 	var wg sync.WaitGroup
 	for _, conf := range tradingConfigs {
 		wg.Add(1)
-		robotInstance, err := engine.New(robotConfig, conf, s, logger, ctx)
+		robotInstance, err := engine.New(robotConfig, conf, s, logger)
 		if err != nil {
 			logger.Fatal("Cant create robot instance", zap.Error(err))
 		}

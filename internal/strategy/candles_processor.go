@@ -50,6 +50,7 @@ func (w *CandlesStrategyProcessor) Init(candles []*techan.Candle) {
 	}
 }
 
+// GenGraph генерирует график в .html и ложит его в директорию с графиками
 func (w CandlesStrategyProcessor) GenGraph(dirname string, filename string) {
 	err := config.CreateDirIfNotExist(dirname)
 	if err != nil {
@@ -89,7 +90,7 @@ func (w *CandlesStrategyProcessor) AddEvent(op Operation, orderId string, execut
 	})
 }
 
-func (w *CandlesStrategyProcessor) Step(candle *techan.Candle) Operation {
+func (w *CandlesStrategyProcessor) Step(candle *techan.Candle, drawGraph bool) Operation {
 	if w.timeSeries.AddCandle(candle) {
 		w.candles = append(w.candles, tachart.Candle{
 			Label: candle.Period.Start.Format("02.01/15:04"),
@@ -100,7 +101,9 @@ func (w *CandlesStrategyProcessor) Step(candle *techan.Candle) Operation {
 			V:     candle.Volume.Float(),
 		})
 		fmt.Printf("Added candle %v for %s: %f\n", w.timeSeries.LastIndex(), w.tradingConfig.Ticker, candle.ClosePrice.Float())
-		go w.GenGraph(graphDirName, w.tradingConfig.Ticker+"_"+w.tradingConfig.AccountId+".html")
+		if drawGraph {
+			go w.GenGraph(graphDirName, w.tradingConfig.Ticker+"_"+w.tradingConfig.AccountId+".html")
+		}
 	} // добавляем пришедшую свечу (неважно откуда)
 
 	if w.ruleStrategy.ShouldEnter(w.timeSeries.LastIndex(), w.TradingRecord) {
@@ -112,12 +115,14 @@ func (w *CandlesStrategyProcessor) Step(candle *techan.Candle) Operation {
 	}
 }
 
+// Consume будет вызван для каждой новой свечки, которая соответствует figi в трейдинг конфиге
 func (w CandlesStrategyProcessor) Consume(data *investapi.MarketDataResponse) {
 	op := w.Step(
 		CandleToTechanCandle(
 			data.GetCandle(),
 			sdk.IntervalToDuration(w.tradingConfig.StrategyConfig.Interval),
 		),
+		true,
 	)
 
 	switch op {
@@ -212,11 +217,6 @@ func (w CandlesStrategyProcessor) buy() {
 			w.tradingConfig.AccountId,
 			orderId,
 		)
-	}
-
-	// TODO in future add check that share is real bought
-	if resp.ExecutionReportStatus != investapi.OrderExecutionReportStatus_EXECUTION_REPORT_STATUS_FILL {
-		fmt.Printf("")
 	}
 
 	if err != nil {

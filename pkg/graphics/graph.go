@@ -21,6 +21,7 @@ type graphHandler struct {
 	logger *zap.Logger
 }
 
+// NewGraphHandler создаёт обработчик запросов для отображения графиков во время торговли
 func NewGraphHandler(logger *zap.Logger) *graphHandler {
 	return &graphHandler{
 		logger: logger,
@@ -41,6 +42,7 @@ func (h *graphHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Возвращает страницу с выбранным графиком
 func (h *graphHandler) handleDetail(w http.ResponseWriter, r *http.Request) error {
 	err := config.CreateDirIfNotExist(graphsPath)
 	if err != nil {
@@ -77,6 +79,7 @@ func (h *graphHandler) handleDetail(w http.ResponseWriter, r *http.Request) erro
 	return nil
 }
 
+// отображает страницу со списком доступных графиков
 func (h *graphHandler) handleMain(w http.ResponseWriter) error {
 	err := config.CreateDirIfNotExist(graphsPath)
 	if err != nil {

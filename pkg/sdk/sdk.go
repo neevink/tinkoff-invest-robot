@@ -32,6 +32,7 @@ type SDK struct {
 	candlesConsumers map[string][]*MarketDataConsumer
 }
 
+// New создаёт новый инстанс SDK
 func New(address string, token string, appName string, ctx context.Context) (*SDK, error) {
 	conn, err := grpc.Dial(
 		address,
@@ -70,6 +71,8 @@ func New(address string, token string, appName string, ctx context.Context) (*SD
 	}, nil
 }
 
+// Run запускает двунаправленный стрим для получения информации
+// Новую информацию об акции скармливает нужному консьюмеру
 func (s *SDK) Run() {
 	go func() {
 		for {
@@ -95,10 +98,7 @@ func (s *SDK) Run() {
 	}()
 }
 
-func (s *SDK) Shutdown() error {
-	return nil
-}
-
+// добавляет токен и app-name к запросу
 func prepareOutgoingContext(ctx context.Context, token string, appName string) context.Context {
 	md := metadata.New(map[string]string{
 		"Authorization": "Bearer " + token,
@@ -107,6 +107,7 @@ func prepareOutgoingContext(ctx context.Context, token string, appName string) c
 	return metadata.NewOutgoingContext(ctx, md)
 }
 
+// извлекает сообщение об ошибке из API
 func extractRequestError(md ...*metadata.MD) error {
 	for _, m := range md {
 		if errMessages, ok := (*m)["message"]; ok {
@@ -116,6 +117,7 @@ func extractRequestError(md ...*metadata.MD) error {
 	return nil
 }
 
+// извлекает trackingId из ответа API
 func extractTrackingId(md ...*metadata.MD) string {
 	for _, m := range md {
 		if trackingIds, ok := (*m)["x-tracking-id"]; ok {
