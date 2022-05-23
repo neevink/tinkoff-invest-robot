@@ -17,7 +17,6 @@ all:
 	@exit 0
 
 build:
-	go build -v ./cmd/cli/
 	go build -v ./cmd/run-robot/
 	go build -v ./cmd/generate-config/
 	go build -v ./cmd/strategy-backtest/
@@ -32,7 +31,6 @@ setup-dev:
 
 clean:
 	rm -f $(TINKOFF_PROTO)/*.go
-	rm -f ./cli
 	rm -f ./run-robot
 	rm -f ./generate-config
 	rm -f ./strategy-backtest

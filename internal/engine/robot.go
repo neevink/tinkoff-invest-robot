@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	"tinkoff-invest-bot/pkg/sdk"
 )
 
+// investRobot Микро-робот, который после запуска начинает торговать укзанным инструментом согласно переданному трейдинг конфигу
 type investRobot struct {
 	robotConfig     *config.RobotConfig
 	tradingConfig   *config.TradingConfig
@@ -23,12 +23,15 @@ type investRobot struct {
 	restartDelay time.Duration
 }
 
-func New(conf *config.RobotConfig, tradingConfig *config.TradingConfig, s *sdk.SDK, logger *zap.Logger, ctx context.Context) (*investRobot, error) {
+// New создать новый инстанс микро-робота
+func New(conf *config.RobotConfig, tradingConfig *config.TradingConfig, s *sdk.SDK, logger *zap.Logger) (*investRobot, error) {
 	tradingStrategy, err := strategy.FromConfig(tradingConfig, s, logger)
 	if err != nil {
 		return nil, err
 	}
 
+	// При старте микро-робота он сразу же загружает предыдущие свечки,
+	// чтобы моментально начать торговать
 	c, _, err := s.GetCandles(
 		tradingConfig.Figi,
 		time.Now().AddDate(0, 0, -1),
@@ -53,6 +56,8 @@ func New(conf *config.RobotConfig, tradingConfig *config.TradingConfig, s *sdk.S
 	}, nil
 }
 
+// Run запускает микро-робота,
+// микро-робот будет автоматически перезапускаться в случае ошибки
 func (r *investRobot) Run() {
 	for {
 		r.logger.Info(

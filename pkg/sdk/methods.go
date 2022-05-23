@@ -10,6 +10,7 @@ import (
 	api "tinkoff-invest-bot/investapi"
 )
 
+// GetShares возвращает список доступных акций для торговли
 func (s *SDK) GetShares() ([]*api.Share, string, error) {
 	var header, trailer metadata.MD
 	r, err := s.instruments.Shares(
@@ -32,6 +33,7 @@ func (s *SDK) GetShares() ([]*api.Share, string, error) {
 	return r.GetInstruments(), trackingId, nil
 }
 
+// GetInstrumentByFigi возвращает информацию об инструменте по figi
 func (s *SDK) GetInstrumentByFigi(figi string) (*api.Instrument, string, error) {
 	var header, trailer metadata.MD
 	r, err := s.instruments.GetInstrumentBy(s.ctx, &api.InstrumentRequest{
@@ -50,6 +52,7 @@ func (s *SDK) GetInstrumentByFigi(figi string) (*api.Instrument, string, error) 
 	return r.GetInstrument(), trackingId, nil
 }
 
+// GetLastPrices позволяет узнать последнюю цену для акций
 func (s *SDK) GetLastPrices(figi []string) ([]*api.LastPrice, string, error) {
 	// figi it's id of share, looks like "BBG002293PJ4"
 	var header, trailer metadata.MD
@@ -70,6 +73,7 @@ func (s *SDK) GetLastPrices(figi []string) ([]*api.LastPrice, string, error) {
 	return r.GetLastPrices(), trackingId, nil
 }
 
+// GetLastPrice позволяет узнать последнюю цену для одной акции
 func (s *SDK) GetLastPrice(figi string) (*api.LastPrice, string, error) {
 	var header, trailer metadata.MD
 	r, err := s.marketData.GetLastPrices(
@@ -90,6 +94,7 @@ func (s *SDK) GetLastPrice(figi string) (*api.LastPrice, string, error) {
 	return r.GetLastPrices()[0], trackingId, nil
 }
 
+// GetLastPricesAll возвращает цены всех акций
 func (s *SDK) GetLastPricesAll() ([]*api.LastPrice, string, error) {
 	var header, trailer metadata.MD
 	r, err := s.marketData.GetLastPrices(s.ctx, &api.GetLastPricesRequest{}, grpc.Header(&header), grpc.Trailer(&trailer))
@@ -104,6 +109,7 @@ func (s *SDK) GetLastPricesAll() ([]*api.LastPrice, string, error) {
 	return r.GetLastPrices(), trackingId, nil
 }
 
+// GetCandles возвращает свечки по figi за указанный период
 func (s *SDK) GetCandles(figi string, from time.Time, to time.Time, interval api.CandleInterval) ([]*api.HistoricCandle, string, error) {
 	var header, trailer metadata.MD
 	r, err := s.marketData.GetCandles(
@@ -129,6 +135,7 @@ func (s *SDK) GetCandles(figi string, from time.Time, to time.Time, interval api
 	return r.GetCandles(), trackingId, nil
 }
 
+// GetOrderBook возвращает выставленные заявки по figi
 func (s *SDK) GetOrderBook(figi string, depth int32) (*api.GetOrderBookResponse, string, error) {
 	var header, trailer metadata.MD
 	r, err := s.marketData.GetOrderBook(
@@ -152,6 +159,7 @@ func (s *SDK) GetOrderBook(figi string, depth int32) (*api.GetOrderBookResponse,
 	return r, trackingId, nil
 }
 
+// GetAccounts возвращает аккаунты, к которым есть доступ по текущему токену
 func (s *SDK) GetAccounts() ([]*api.Account, string, error) {
 	var header, trailer metadata.MD
 	resp, err := s.users.GetAccounts(s.ctx, &api.GetAccountsRequest{}, grpc.Header(&header), grpc.Trailer(&trailer))
@@ -167,6 +175,7 @@ func (s *SDK) GetAccounts() ([]*api.Account, string, error) {
 	return resp.Accounts, trackingId, nil
 }
 
+// GetMarginAttributes возвращает маржинальные показатели по счёту
 func (s *SDK) GetMarginAttributes(accountId string) (*api.GetMarginAttributesResponse, string, error) {
 	var header, trailer metadata.MD
 	resp, err := s.users.GetMarginAttributes(
@@ -189,6 +198,7 @@ func (s *SDK) GetMarginAttributes(accountId string) (*api.GetMarginAttributesRes
 	return resp, trackingId, nil
 }
 
+// GetUserInfo возвращает информацию о пользователе
 func (s *SDK) GetUserInfo() (*api.GetInfoResponse, string, error) {
 	var header, trailer metadata.MD
 	resp, err := s.users.GetInfo(
@@ -209,6 +219,7 @@ func (s *SDK) GetUserInfo() (*api.GetInfoResponse, string, error) {
 	return resp, trackingId, nil
 }
 
+// GetOperations возвращает операции, выполненные на аккаунте за указанный период
 func (s *SDK) GetOperations(accountId string, from time.Time, to time.Time, figi string) ([]*api.Operation, string, error) {
 	var header, trailer metadata.MD
 
@@ -235,6 +246,7 @@ func (s *SDK) GetOperations(accountId string, from time.Time, to time.Time, figi
 	return r.GetOperations(), trackingId, nil
 }
 
+// GetPortfolio возвращает портфолио аккаунта
 func (s *SDK) GetPortfolio(accountId string) (*api.PortfolioResponse, string, error) {
 	var header, trailer metadata.MD
 
@@ -258,10 +270,12 @@ func (s *SDK) GetPortfolio(accountId string) (*api.PortfolioResponse, string, er
 	return resp, trackingId, nil
 }
 
+// RealMarketBuy выставляет ордер на покупку покупку инструмента по figi и аккаунту
 func (s *SDK) RealMarketBuy(figi string, quantity int64, accountId string, orderId string) (*api.PostOrderResponse, string, error) {
 	return s.postMarketOrder(figi, quantity, api.OrderDirection_ORDER_DIRECTION_BUY, accountId, orderId)
 }
 
+// RealMarketSell выставляет ордер на продажу инструмента по figi и аккаунту
 func (s *SDK) RealMarketSell(figi string, quantity int64, accountId string, orderId string) (*api.PostOrderResponse, string, error) {
 	return s.postMarketOrder(figi, quantity, api.OrderDirection_ORDER_DIRECTION_SELL, accountId, orderId)
 }
@@ -295,7 +309,7 @@ func (s *SDK) postMarketOrder(figi string, quantity int64, direction api.OrderDi
 	return resp, trackingId, nil
 }
 
-// GetPositions Получает все активные позиции аккаунта
+// GetPositions получает все активные позиции аккаунта
 func (s *SDK) GetPositions(accountId string) (*api.PositionsResponse, string, error) {
 	var header, trailer metadata.MD
 	resp, err := s.operations.GetPositions(

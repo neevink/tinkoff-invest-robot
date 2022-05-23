@@ -11,7 +11,7 @@ import (
 	api "tinkoff-invest-bot/investapi"
 )
 
-// CanTradeNow Получает расписание торгов на указанную дату
+// CanTradeNow Возможно ли торговать инструментом в данный момент времени
 func (s *SDK) CanTradeNow(exchange string) (bool, string, error) {
 	var header, trailer metadata.MD
 
@@ -52,6 +52,7 @@ func (s *SDK) CanTradeNow(exchange string) (bool, string, error) {
 	return false, trackingId, nil
 }
 
+// IsEnoughMoneyToBuy достаточно ли денег на счёте для покупки акциий
 func (s *SDK) IsEnoughMoneyToBuy(accountId string, isSandbox bool, figi string, currency string, quantity int64) (bool, string, error) {
 	var positions *api.PositionsResponse
 	var trackingId string
@@ -86,6 +87,7 @@ func (s *SDK) IsEnoughMoneyToBuy(accountId string, isSandbox bool, figi string, 
 	return false, trackingId, xerrors.Errorf("No money with currency %s", currency)
 }
 
+// IsAvailableForSale Есть ли у пользователя акции, чтобы продать их
 func (s *SDK) IsAvailableForSale(accountId string, isSandbox bool, figi string, quantity int64) (bool, string, error) {
 	var positions *api.PositionsResponse
 	var trackingId string

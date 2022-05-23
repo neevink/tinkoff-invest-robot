@@ -6,6 +6,8 @@ import (
 	"tinkoff-invest-bot/internal/config"
 )
 
+type RuleStrategy func(tradingConfig config.TradingConfig) (techan.RuleStrategy, *techan.TimeSeries)
+
 const (
 	shortWindow  = "short_window"
 	middleWindow = "middle_window"
@@ -13,10 +15,11 @@ const (
 	window       = "window"
 )
 
-// TODO можно сделать RSI, волны боллинджера, CCI, Stochastic, Keltner Channel, MACD
+// Тут объявляется список доступных стратегий, которые можно использовать в своих трейдинг конфигах.
+// Чтобы расширить функционал, нужно создать функцию, которая удовлетворяет типу RuleStrategy
 var (
-	// List единственное место, где задаются стратегии
-	List = map[string]func(tradingConfig config.TradingConfig) (techan.RuleStrategy, *techan.TimeSeries){
+	// List это единственное место, где задаются стратегии
+	List = map[string]RuleStrategy{
 		"simpleEMA":   simpleEMA,
 		"doubleEMA":   doubleEMA,
 		"tripleEMA":   tripleEMA,

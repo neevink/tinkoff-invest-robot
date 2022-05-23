@@ -19,6 +19,7 @@ const (
 	Hold
 )
 
+// FromConfig создаёт CandlesStrategyProcessor по трейдинг конфигу
 func FromConfig(tradingConfig *config.TradingConfig, s *sdk.SDK, logger *zap.Logger) (*CandlesStrategyProcessor, error) {
 	f := rule_strategy.List[tradingConfig.StrategyConfig.Name]
 	if f == nil {
