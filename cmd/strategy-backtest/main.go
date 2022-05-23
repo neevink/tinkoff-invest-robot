@@ -126,12 +126,22 @@ func main() {
 	income := 0.0
 	for i, trade := range strategyWrapper.TradingRecord.Trades {
 		res := trade.ExitOrder().Price.Sub(trade.EntranceOrder().Price).Float()
-		fmt.Printf("поручение %v. доход: %f\n", i, res)
+		fmt.Printf("Поручение %v. %s\n", i+1, colorizeFloat(res))
 		income += res
 	}
-	fmt.Println("суммарный доход:", income)
+	fmt.Println("Суммарный доход:", colorizeFloat(income), tradingConfig.Currency)
 	path := tradingConfig.Ticker + "_" + tradingConfig.AccountId + ".html"
 	strategyWrapper.GenGraph(graphsPath, path)
 	p, _ := os.Getwd()
-	fmt.Printf("График успешно сгенерирован, посмотреть его можно тут: file://%s", p+"/graphs/"+path)
+	fmt.Printf("График успешно сгенерирован, посмотреть его можно тут: file://%s", p+"/graphs/"+path+"\n")
+}
+
+func colorizeFloat(f float64) string {
+	if f < 0 {
+		return color.RedString("%f", f)
+	} else if f > 0 {
+		return color.GreenString("%f", f)
+	} else {
+		return color.WhiteString("%f", f)
+	}
 }
