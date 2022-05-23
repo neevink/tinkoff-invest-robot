@@ -35,6 +35,21 @@ type CandlesStrategyProcessor struct {
 	blockChannel chan FinishEvent
 }
 
+func (w *CandlesStrategyProcessor) Init(candles []*techan.Candle) {
+	for _, candle := range candles {
+		if w.timeSeries.AddCandle(candle) {
+			w.candles = append(w.candles, tachart.Candle{
+				Label: candle.Period.Start.Format("02.01/15:04"),
+				O:     candle.OpenPrice.Float(),
+				H:     candle.MaxPrice.Float(),
+				L:     candle.MinPrice.Float(),
+				C:     candle.ClosePrice.Float(),
+				V:     candle.Volume.Float(),
+			})
+		}
+	}
+}
+
 func (w CandlesStrategyProcessor) GenGraph(dirname string, filename string) {
 	err := config.CreateDirIfNotExist(dirname)
 	if err != nil {
@@ -99,7 +114,7 @@ func (w *CandlesStrategyProcessor) Step(candle *techan.Candle) Operation {
 
 func (w CandlesStrategyProcessor) Consume(data *investapi.MarketDataResponse) {
 	op := w.Step(
-		CandleToCandle(
+		CandleToTechanCandle(
 			data.GetCandle(),
 			sdk.IntervalToDuration(w.tradingConfig.StrategyConfig.Interval),
 		),
@@ -210,7 +225,7 @@ func (w CandlesStrategyProcessor) buy() {
 			zap.String("accountId", w.tradingConfig.AccountId),
 			zap.String("figi", w.tradingConfig.Figi),
 			zap.String("ticker", w.tradingConfig.Ticker),
-			zap.Float64("price", sdk.MoneyValueToFloat(resp.GetInitialOrderPrice())),
+			zap.Float64("price", sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
 			zap.String("ruleStrategy", w.tradingConfig.StrategyConfig.Name),
 			zap.String("orderId", orderId),
 			zap.String("trackingId", trackingId),
@@ -261,7 +276,7 @@ func (w CandlesStrategyProcessor) sell() {
 			zap.String("accountId", w.tradingConfig.AccountId),
 			zap.String("figi", w.tradingConfig.Figi),
 			zap.String("ticker", w.tradingConfig.Ticker),
-			zap.Float64("price", sdk.MoneyValueToFloat(resp.GetInitialOrderPrice())),
+			zap.Float64("price", sdk.MoneyValueToFloat(resp.GetExecutedOrderPrice())),
 			zap.String("ruleStrategy", w.tradingConfig.StrategyConfig.Name),
 			zap.String("orderId", orderId),
 			zap.String("trackingId", trackingId),

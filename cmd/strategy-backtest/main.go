@@ -109,7 +109,7 @@ func main() {
 		log.Fatalf("За указанный период не было ни одной свечи")
 	}
 	for _, candle := range candles {
-		newCandle := strategy.HistoricCandleToCandle(candle, sdk.IntervalToDuration(tradingConfig.StrategyConfig.Interval))
+		newCandle := strategy.HistoricCandleToTechanCandle(candle, sdk.IntervalToDuration(tradingConfig.StrategyConfig.Interval))
 		op := strategyWrapper.Step(newCandle)
 		switch op {
 		case strategy.Buy:
@@ -124,12 +124,12 @@ func main() {
 	}
 
 	income := 0.0
-	for _, trade := range strategyWrapper.TradingRecord.Trades {
+	for i, trade := range strategyWrapper.TradingRecord.Trades {
 		res := trade.ExitOrder().Price.Sub(trade.EntranceOrder().Price).Float()
-		fmt.Printf("res: %f\n", res)
+		fmt.Printf("поручение %v. доход: %f\n", i, res)
 		income += res
 	}
-	fmt.Println("income:", income)
+	fmt.Println("суммарный доход:", income)
 	path := tradingConfig.Ticker + "_" + tradingConfig.AccountId + ".html"
 	strategyWrapper.GenGraph(graphsPath, path)
 	p, _ := os.Getwd()

@@ -2,7 +2,7 @@
 .idea/
 
 # proto output
-investapi/*.go
+#investapi/*.go
 
 # output
 cli
