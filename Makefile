@@ -16,7 +16,7 @@ all:
 	@echo "coverage			- Show test's coverage"
 	@exit 0
 
-build: compile-proto
+build:
 	go build -v ./cmd/cli/
 	go build -v ./cmd/run-robot/
 	go build -v ./cmd/generate-config/
